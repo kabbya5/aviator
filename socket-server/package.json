@@ -1,0 +1,18 @@
+{
+  "name": "wingo-socket-server",
+  "version": "1.0.0",
+  "type": "commonjs",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js"
+  },
+  "dependencies": {
+    "socket.io": "^4.8.3",
+    "uuid": "^9.0.1",
+    "axios": "^1.5.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.3"
+  }
+}
