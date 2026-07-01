@@ -2,12 +2,12 @@
 /* =========================
    GAME VARIABLES
 ========================= */
-
+const APP_URL = window.location.origin;
 let progress = 0;
 
 let speed = 2;
 
-let multiplier = 1;
+let multiplier = 3;
 
 let crashed = false;
 let canAnimate = true;
@@ -20,8 +20,7 @@ const plane = document.getElementById("plane");
 
 let betStatus = 'running';
 let betAmount = 0;
-let autoBet = false;
-let autoCashout = false;
+let checkAutoBet = true;
 
 
 const socket = io("http://localhost:3000", {
@@ -35,20 +34,106 @@ socket.on("connect", () => {
     });
 });
 
-socket.on("round:new", data => {
+
+function animateCount(element, endValue, duration = 5000) {
+    const startValue = 0;
+    const incrementTime = 20; // update every 20ms
+    const totalSteps = duration / incrementTime;
+    const increment = endValue / totalSteps;
+
+    let currentValue = startValue;
+
+    const timer = setInterval(() => {
+        currentValue += increment;
+
+        if (currentValue >= endValue) {
+            currentValue = endValue;
+            clearInterval(timer);
+        }
+
+        $(element).text(Math.floor(currentValue).toLocaleString());
+    }, incrementTime);
+}
+
+var total_win = 0;
+
+socket.on('bet:update',(data) =>{
+    total_win = 0;
+    $('.progress-bar').css('width', 0 + '%');
+    $('#total-win').text('0.00');
+    const bets = data.bets;
+    const container = $('.bet-items');
+    animateCount('#total_bet', data.total_bets, 4000);
+   
+    container.empty();
+
+    let index = 0;
+    const interval = setInterval(function () {
+
+        if (index >= bets.length) {
+            clearInterval(interval);
+            return;
+        }
+
+        const bot = bets[index];
+
+        const username =
+            bot.bet_name.substring(0, 1) +
+            '***' +
+            bot.bet_name.substring(bot.bet_name.length - 1);
+
+        container.append(`
+            <div class="bet-list-item bet-autocashout"
+                data-bet_amount="${bot.bet_amount}"
+                data-cashout="${bot.cashout_point}">
+
+                <div class="item-column player">
+                    <img class="avatar" src="${APP_URL}/${bot.image}" alt="">
+                    <div class="username">${username}</div>
+                </div>
+
+                <div class="item-column bet">
+                    <div>${parseFloat(bot.bet_amount || 0).toFixed(2)}</div>
+                </div>
+
+                <div class="item-column x"></div>
+
+                <div class="item-column win"></div>
+            </div>
+        `);
+
+        index++;
+
+    }, Math.floor(Math.random() * 171) + 30);
+});
+
+socket.on("round:new", (data) => {
     multiplierLabel.hide();
     multiplierText.hide();
     gameLoading.addClass('active');
     loadingBar.addClass('animate');
     canAnimate = true;
+    $('#round_id').val(data.roundId);
+
+    $('.bet-control').each(function () {
+        $(this).data('waiting','');
+        $(this).find('.waiting').hide();
+    });
 
     setTimeout(() => {
         gameLoading.removeClass('active');
-    }, 3000);
+    }, 6000);
+
+    checkAutoBet = true;
 });
 
 socket.on("betting:timer", data => {
     betStatus = 'bet';
+
+    $('.bet-control').each(function () {
+        $(this).data('waiting','');
+        $(this).find('.waiting').hide();
+    });
 });
 
 socket.on("bet:close", () => {
@@ -73,11 +158,16 @@ socket.on("multiplier:update", data => {
         animate();
         canAnimate = false;
     }
+    
+    multiplier = parseFloat(data.multiplier);
+    updateCashout();
+    betAutoCashout();
 });
 
 const payoutsBlock = $(".payouts-block");
 
 socket.on("round:crash", (data) => {
+    resetBtn();
     progress = data.progress;
     speed = data.speed;
     crashed = true;
@@ -120,37 +210,6 @@ socket.on("round:crash", (data) => {
     }
 });
 
-$(window).on('load', function () {
-
-    $('#main-loading').fadeOut(500, function () {
-
-            $('#main-section').fadeIn(500);
-
-        });
-
-    // setTimeout(function () {
-
-    //     $('#main-loading').fadeOut(500, function () {
-
-    //         $('#main-section').fadeIn(500);
-
-    //     });
-
-    // }, 3000);
-
-});
-
-$(document).on('click', '.bet-tab', function () {
-
-    const target = $(this).data('target');
-
-    $('.bet-tab').removeClass('active');
-    $('.tab-details').removeClass('active');
-    $(this).addClass('active');
-    $(target).addClass('active');
-
-});
-
 const canvas = document.getElementById("gameCanvas");
 
 const ctx = canvas.getContext("2d");
@@ -165,7 +224,6 @@ function resizeCanvas() {
 }
 
 resizeCanvas();
-
 
 window.addEventListener(
     "resize",
@@ -495,125 +553,28 @@ function resetGame(){
 
 }
 
-// ACtion js
+function checkBet() {
+    $('.buttons-block').each(function () {
+        if ($(this).hasClass('active-button')) {
+            var $btns = $(this);
+            var $parent = $btns.closest('.bet-control');
 
-$(document).on('click', '#history-toggler', function () {
-    $('#history-details').toggleClass('active');
-});
+            var $betBtn = $parent.find('.btn-success');
+            var $cancelBtn = $parent.find('.btn-danger');
+            var $cashOutBtn = $parent.find('.btn-warning');
 
-$(document).on('click', '.plus', function () {
-
-    var parent = $(this).closest('.bet-control');
-    var input = parent.find('.bet-input');
-    var bet_amount = parent.find('.bet-amount');
-
-    var amount = parseInt(input.val()) || 0;
-    amount = amount + 10;
-
-    input.val(amount.toFixed(2));
-    bet_amount.text(amount.toFixed(2));
-});
-
-$(document).on('click', '.minus', function () {
-
-    var parent = $(this).closest('.bet-control');
-    var input = parent.find('.bet-input');
-    var bet_amount = parent.find('.bet-amount');
-
-    var amount = parseInt(input.val()) || 0;
-    amount = Math.max(amount - 10, 1);
-
-    input.val(amount.toFixed(2));
-    bet_amount.text(amount.toFixed(2));
-});
-
-$(document).on('click', '.bet-opt', function () {
-    var parent = $(this).closest('.bet-control');
-    var input = parent.find('.bet-input');
-    var amount = parseFloat($(this).data('value'));
-    var bet_amount = parent.find('.bet-amount');
-
-    input.val(amount.toFixed(2));
-    bet_amount.text(amount.toFixed(2));
-});
-
-$(document).on('change', '.bet-input', function () {
-    var parent = $(this).closest('.bet-control');
-    var input = parent.find('.bet-input');
-    var bet_amount = parent.find('.bet-amount');
-
-    var amount = parseInt(input.val()) || 0;
-
-    bet_amount.text(amount.toFixed(2));
-});
-
-$(document).on('click', '.bet-btn', function () {
-
-    var $btn = $(this);
-    var $parent = $btn.closest('.bet-control');
-
-    var $betBtn = $parent.find('.btn-success');
-    var $cancelBtn = $parent.find('.btn-danger');
-    var $cashOutBtn = $parent.find('.btn-warning');
-
-    var $input = $parent.find('.bet-input');
-
-    var amount = parseFloat($input.val()) || 0;
-
-    // Detect button type
-    var isBet = $btn.hasClass('btn-success');
-    var isCancel = $btn.hasClass('btn-danger');
-    var isCashOut =  $btn.hasClass('btn-warning')
-
-    /*
-    |--------------------------------------------------------------------------
-    | BET BUTTON
-    |--------------------------------------------------------------------------
-    */
-
-    if (isBet) {
-
-        if (amount <= 0) {
-            alert('Enter valid amount');
-            return;
+            if (betStatus === 'running') {
+                $betBtn.removeClass('active');
+                $cashOutBtn.addClass('active');
+            } else {
+                $cashOutBtn.removeClass('active')
+                $betBtn.addClass('active');
+            }
         }
+    });
+}
 
-        // Switch buttons
-        $betBtn.removeClass('active');
-        $cancelBtn.addClass('active');
+// checkBet();
 
-        // Show waiting only if round already started
-        if (betStatus === 'running') {
-            $cancelBtn.find('.waiting').show();
-        } else {
-            $cancelBtn.find('.waiting').hide();
-        }
-
-        console.log('Bet placed:', amount);
-
-        // socket.emit('bet:place', { amount });
-
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | CANCEL BUTTON
-    |--------------------------------------------------------------------------
-    */
-    if (isCancel) {
-
-        // Restore original state
-        $cancelBtn.removeClass('active');
-        $betBtn.addClass('active');
-
-        $cancelBtn.find('.waiting').hide();
-
-        console.log('Bet cancelled');
-
-        // socket.emit('bet:cancel');
-
-    }
-
-});
 
 

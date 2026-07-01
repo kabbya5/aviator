@@ -8,7 +8,8 @@
     flex-direction: column;
     background: #1b1c1d;
     border-radius: 20px;
-    padding: var(--paddingMedium) var(--paddingMedium)
+    padding: var(--paddingMedium) var(--paddingMedium);
+    height:100%;
 }
 
 .bet-details .navigation-switcher{
@@ -46,7 +47,8 @@
 .bet-details .tab-details{
     display: none;
     margin: var(--marginSmall) 0;
-    height: 100%;
+    max-height: calc(110vh - 220px);
+    overflow: hidden;
 }
 
 .bet-details .tab-details.active{
@@ -393,7 +395,6 @@ color: rgb(192, 23, 180);
 .bet-details .top-history .top-list .top-wins-list{
     border-radius: 16px;
     margin: 0;
-    max-height: calc(100vh - 220px);
     overflow-y: auto;
     /* height: 1116px; */
 }

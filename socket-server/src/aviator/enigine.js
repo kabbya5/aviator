@@ -26,6 +26,13 @@ class Enigine {
         try {
             const response = await axios.get('http://127.0.0.1:8000/aviator/genetate/round');
             this.roundId = response.data.round_no;
+            const bets = response.data.bets;
+            const total_bets = response.data.total_bets;
+            this.io.to(this.roomName).emit('bet:update',{
+                bets:bets,
+                total_bets:total_bets,
+            });
+
             if(this.roundId){
                 this.startBetting();
             }
@@ -128,7 +135,7 @@ class Enigine {
 
             // send multiplier update
             this.io.to(this.roomName).emit("multiplier:update", {
-                multiplier: this.multiplier,
+                multiplier: parseFloat(this.multiplier.toFixed(2)),
                 progress: this.progress,
                 speed: this.speed
             });
@@ -156,7 +163,11 @@ class Enigine {
 
     async generateCrashPoint(retry = 0) {
         try {
-            const response = await axios.get('http://127.0.0.1:8000/aviator/crush/point');
+            const response = await axios.get('http://127.0.0.1:8000/aviator/crush/point',{
+                params: {
+                    round_id: this.roundId,
+                }
+            });
 
             if(response.data.crash_point > 0){
                 this.crashPoint = response.data.crash_point;

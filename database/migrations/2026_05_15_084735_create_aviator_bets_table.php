@@ -18,7 +18,7 @@ return new class extends Migration
             $table->decimal('bet_amount', 18, 2);
             $table->decimal('win_amount', 18, 2)->default(0);
             $table->decimal('cashout_multiplier', 10, 2)->nullable();
-            $table->enum('status', ['pending', 'cashed_out', 'lost'])->default('pending');
+            $table->enum('status', ['com', 'cashed_out', 'lost'])->default('pending');
             $table->decimal('after_amount', 18, 2)->default(0);
             $table->decimal('before_amount', 18,2)->default(0);
 

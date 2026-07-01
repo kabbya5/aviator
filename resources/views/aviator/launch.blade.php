@@ -6,21 +6,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>BoomX</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <link rel="stylesheet" href="{{ asset('custom_aviator/css/main.css') }}">
 </head>
 
 <body id="aviator">
-    <div id="round_id" style="display: none"></div>
-    <div id="user_id" style="display:none" > 1 </div>
+    <input type="text" value="123" id="round_id" style="display:none">
+    <input id="user_id" style="display:none" value="1">
 
-    <div class="notify-box">
+    <div class="bet-notify-box">
         <div class="cashout">
             <div class="title">You have cashed out!</div>
             <div class="multi">115x</div>
         </div>
         <div class="win-box">
-            <div class="win-title">Win USD</div>
+            <div class="win-title">Win {{$currency}}</div>
             <div class="win-amount">115.00</div>
         </div>
         <div class="close-btn">&times;</div>
@@ -75,18 +76,18 @@
                                 @endforeach
                             </div>
 
-                            <span class="win-amount"> 10. 00 </span>
+                            <span class="win-amount" id="total-win"> {{number_format(rand(10000,20000),2)}} </span>
                         </div>
                         <div class="stats">
-                            <div  class="bets">
-                                <span class="bets-count">407/407</span>
+                            <div class="bets">
+                                <span class="bets-count"> <span id="payout-bet"> 0 </span>/<span id="total_bet">{{rand(3000,5000)}}</span> </span>
                                 <span class="bets-label"> Bets</span>
                             </div>
                             <div class="total-win"> Total win {{$currency}} </div>
                         </div>
 
                         <div class="progress">
-                            <div class="progress-bar" style="width: 20%;"></div>
+                            <div class="progress-bar" style="width:0%;"></div>
                         </div>
                     </div>
 
@@ -100,64 +101,19 @@
 
                         <div class="bet-list">
                             <div class="bet-items">
-                                <div class="bet-list-item cashout">
-                                    <div class="item-column player">
-                                        <img class="avatar" src="{{$images[0]}}" alt="">
-                                        <div class="username">d***6</div>
+                                @foreach($bots as $key => $bot)
+                                    <div class="bet-list-item bet-autocashout" data-bet_amount="{{$bot->bet_amount}}" data-cashout="{{$bot->cashout_point}}">
+                                        <div class="item-column player">
+                                            <img class="avatar" src="{{asset($bot->image)}}" alt="">
+                                            <div class="username">{{substr($bot->name, 0, 1) . '***' . substr($bot->name, -1)}}</div>
+                                        </div>
+                                        <div class="item-column bet">
+                                            <div  class="ng-star-inserted"> {{$bot->bet_amount}} </div>
+                                        </div>
+                                        <div class="item-column x"> </div>
+                                        <div class="item-column win"> </div>
                                     </div>
-                                    <div class="item-column bet">
-                                        <div  class="ng-star-inserted"> 100.00 </div>
-                                    </div>
-                                    <div class="item-column x small"> 2.12 </div>
-                                    <div class="item-column win"> 300  </div>
-                                </div>
-                                <div class="bet-list-item cashout">
-                                    <div class="item-column player">
-                                        <img class="avatar" src="{{$images[0]}}" alt="">
-                                        <div class="username">d***6</div>
-                                    </div>
-                                    <div class="item-column bet">
-                                        <div  class="ng-star-inserted"> 100.00 </div>
-                                    </div>
-                                    <div class="item-column x big"> 13.40 </div>
-                                    <div class="item-column win"> 300  </div>
-                                </div>
-                                <div class="bet-list-item cashout">
-                                    <div class="item-column player">
-                                        <img class="avatar" src="{{$images[0]}}" alt="">
-                                        <div class="username">d***6</div>
-                                    </div>
-                                    <div class="item-column bet">
-                                        <div  class="ng-star-inserted"> 100.00 </div>
-                                    </div>
-                                    <div class="item-column x medium"> 1.4 </div>
-                                    <div class="item-column win"> 300  </div>
-                                </div>
-                                @for($i = 0; $i < 100; $i++)
-                                <div class="bet-list-item">
-                                    <div class="item-column player">
-                                        <img class="avatar" src="{{$images[0]}}" alt="">
-                                        <div class="username">d***6</div>
-                                    </div>
-                                    <div class="item-column bet">
-                                        <div  class="ng-star-inserted"> 100.00 </div>
-                                    </div>
-                                    <div class="item-column x"> 1.4 </div>
-                                    <div class="item-column win"> 300  </div>
-                                </div>
-                                @endfor
-
-                                <div class="bet-list-item">
-                                    <div class="item-column player">
-                                        <img class="avatar" src="{{$images[0]}}" alt="">
-                                        <div class="username">d***6</div>
-                                    </div>
-                                    <div class="item-column bet">
-                                        <div  class="ng-star-inserted"> 100.00 </div>
-                                    </div>
-                                    <div class="item-column x"> 1.4 </div>
-                                    <div class="item-column win"> 300  </div>
-                                </div>
+                                @endforeach
                             </div>
                         </div>
                     </div>
@@ -169,7 +125,7 @@
                             <div class="result-text">
                                 Round Result
                             </div>
-                            <div class="result-multiplier big" style="color: rgb(192, 23, 180);">
+                            <div class="result-multiplier">
                                 11.78x
                             </div>
                         </div>
@@ -177,71 +133,14 @@
                     <div class="live-bet">
                         <div class="header">
                             <span class="header-item player">Player</span>
-                            <span  class="header-item bet"> Bet USD </span>
+                            <span  class="header-item bet"> Bet {{$currency}} </span>
                             <span class="header-item x">X</span>
-                            <span class="header-item win"> Win USD </span>
+                            <span class="header-item win"> Win </span>
                         </div>
 
                         <div class="bet-list">
                             <div class="bet-items">
-                                <div class="bet-list-item cashout">
-                                    <div class="item-column player">
-                                        <img class="avatar" src="{{$images[0]}}" alt="">
-                                        <div class="username">d***6</div>
-                                    </div>
-                                    <div class="item-column bet">
-                                        <div  class="ng-star-inserted"> 100.00 </div>
-                                    </div>
-                                    <div class="item-column x small"> 1.23 </div>
-                                    <div class="item-column win"> 300  </div>
-                                </div>
-                                <div class="bet-list-item cashout">
-                                    <div class="item-column player">
-                                        <img class="avatar" src="{{$images[0]}}" alt="">
-                                        <div class="username">d***6</div>
-                                    </div>
-                                    <div class="item-column bet">
-                                        <div  class="ng-star-inserted"> 100.00 </div>
-                                    </div>
-                                    <div class="item-column x medium"> 3.23 </div>
-                                    <div class="item-column win"> 300  </div>
-                                </div>
-                                <div class="bet-list-item cashout">
-                                    <div class="item-column player">
-                                        <img class="avatar" src="{{$images[0]}}" alt="">
-                                        <div class="username">d***6</div>
-                                    </div>
-                                    <div class="item-column bet">
-                                        <div  class="ng-star-inserted"> 100.00 </div>
-                                    </div>
-                                    <div class="item-column x big"> 13.40 </div>
-                                    <div class="item-column win"> 300  </div>
-                                </div>
-                                @for($i = 0; $i < 100; $i++)
-                                <div class="bet-list-item">
-                                    <div class="item-column player">
-                                        <img class="avatar" src="{{$images[0]}}" alt="">
-                                        <div class="username">d***6</div>
-                                    </div>
-                                    <div class="item-column bet">
-                                        <div  class="ng-star-inserted"> 100.00 </div>
-                                    </div>
-                                    <div class="item-column x"> 1.4 </div>
-                                    <div class="item-column win"> 300  </div>
-                                </div>
-                                @endfor
-
-                                <div class="bet-list-item">
-                                    <div class="item-column player">
-                                        <img class="avatar" src="{{$images[0]}}" alt="">
-                                        <div class="username">d***6</div>
-                                    </div>
-                                    <div class="item-column bet">
-                                        <div  class="ng-star-inserted"> 100.00 </div>
-                                    </div>
-                                    <div class="item-column x"> 1.4 </div>
-                                    <div class="item-column win"> 300  </div>
-                                </div>
+                            
                             </div>
                         </div>
                     </div>
@@ -312,10 +211,8 @@
                                         @endfor
                                     </div>
                                 </div>
-
                             </div>
                         </div>
-
                     </div>
                 </div>
 
@@ -422,14 +319,14 @@
 
                 <div class="bet-controls">
                     <div class="controls">
-                        <div class="bet-control double-bet">
+                        <div class="bet-control double-bet bet-control-1" data-class="bet-control-1">
                             <div class="controls">
                                 <div class="controls-content-top">
                                     <div class="navigation-wrapper">
                                         <div class="navigation ng-untouched ng-valid ng-star-inserted ng-dirty">
                                             <div class="navigation-switcher">
                                                 <button class="tab ng-star-inserted active"> Bet </button>
-                                                <button class="tab ng-star-inserted"> Auto </button>
+                                                <button class="tab ng-star-inserted auto-toggler"> Auto </button>
                                             </div>
                                         </div>
                                     </div>
@@ -459,7 +356,7 @@
                                                 <button class="btn btn-secondary btn-sm bet-opt ng-star-inserted" data-value="10000"><span> 10000 </span></button>
                                             </div>
                                         </div>
-                                        <div class="buttons-block">
+                                        <div class="buttons-block active-button">
                                             <button class="btn bet-btn btn-success bet ng-star-inserted active">
                                                 <span class="d-flex flex-column justify-content-center align-items-center">
                                                     <label class="label"> Bet </label>
@@ -474,11 +371,11 @@
                                                 <label class="label"> Cancel </label>
                                                 <span class="btn-tooltip ng-star-inserted waiting"> Waiting for next round </span>
                                             </button>
-                                            <button class="btn btn-warning cashout ng-star-inserted">
+                                            <button class="btn bet-btn btn-warning bet cashout ng-star-inserted">
                                                 <span class="d-flex flex-column justify-content-center align-items-center">
                                                     <label> Cash Out </label>
-                                                    <label class="amount">
-                                                        <span >1.60</span>
+                                                    <label>
+                                                        <span class="amount"> </span>
                                                         <span class="currency"> {{$currency}} </span>
                                                     </label>
                                                 </span>
@@ -514,9 +411,11 @@
                                                         <div class="spinner small">
                                                             <div class="buttons"></div>
                                                             <div class="input full-width">
-                                                                <input inputmode="decimal" disabled="" type="text">
+                                                                <input inputmode="decimal" disabled="" value="1.1" type="text">
                                                             </div>
-                                                            <div class="text icon-x disabled ng-star-inserted"></div>
+                                                            <div class="text icon-x disabled ng-star-inserted">
+                                                                <img src="{{asset('custom_aviator/img/close-icon.svg')}}" alt="" style="width: 100%;height:100%;">
+                                                            </div>
                                                             <div class="buttons"></div>
                                                         </div>
                                                     </div>
@@ -525,10 +424,9 @@
                                         </div>
                                     </div>
                                 </div>
-
                             </div>
                         </div>
-                        <div class="bet-control double-bet ng-star-inserted">
+                        <div class="bet-control double-bet ng-star-inserted bet-control-2" data-class="bet-control-2">
                             <div class="controls">
                                 <div class="controls-content-top">
                                     <div class="sec-hand-btn remove ng-star-inserted"></div>
@@ -536,7 +434,7 @@
                                         <div class="navigation ng-untouched ng-valid ng-star-inserted ng-dirty">
                                             <div class="navigation-switcher">
                                                 <button class="tab ng-star-inserted active"> Bet </button>
-                                                <button class="tab ng-star-inserted"> Auto </button>
+                                                <button class="tab ng-star-inserted auto-toggler"> Auto </button>
                                             </div>
                                         </div>
                                     </div>
@@ -587,7 +485,7 @@
                                                 <span class="d-flex flex-column justify-content-center align-items-center">
                                                     <label> Cash Out </label>
                                                     <label class="amount-multiple">
-                                                        <span >1.60</span>
+                                                        <span class="amount">1.60</span>
                                                         <span class="currency"> {{$currency}} </span>
                                                     </label>
                                                 </span>
@@ -623,9 +521,11 @@
                                                         <div class="spinner small">
                                                             <div class="buttons"></div>
                                                             <div class="input full-width">
-                                                                <input inputmode="decimal" disabled="" type="text">
+                                                                <input inputmode="decimal" disabled value="1.1" type="text">
                                                             </div>
-                                                            <div class="text icon-x disabled ng-star-inserted"></div>
+                                                            <div class="text icon-x disabled ng-star-inserted">
+                                                                 <img src="{{asset('custom_aviator/img/close-icon.svg')}}" alt="" style="width: 100%;height:100%;">
+                                                            </div>
                                                             <div class="buttons"></div>
                                                         </div>
                                                     </div>
@@ -636,6 +536,7 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -646,6 +547,7 @@
         <script src="https://code.jquery.com/jquery-3.7.1.min.js"
             integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
         <script src="{{ asset('custom_aviator/js/main.js') }}"></script>
+        <script src="{{ asset('custom_aviator/js/button.js') }}"></script>
     </body>
 </body>
 

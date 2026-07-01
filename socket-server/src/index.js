@@ -20,7 +20,7 @@ const io = new Server(server, {
 });
 
 io.on('connection', socket => {
-    // roomEvents(io, socket);
+    roomEvents(io, socket);
     aviatorEvents(io, socket);
 });
 

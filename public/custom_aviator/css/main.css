@@ -206,28 +206,25 @@ body {
     color: rgb(192, 23, 180) !important;
 }
 
-
-.notify-box{
+.bet-notify-box{
     width:355px;
     height:54px;
-    position:relative;
+    position:fixed;
     border-radius:22px;
-    top:100px;
-    left: 50%;
-    transform: translateX(-50%);
+    top:10px;
+    left: 40%;
     background:#23321d;
     border:1px solid rgba(131, 192, 233, 0.55);
     overflow:hidden;
     z-index: 100;
+    display: none;
 }
-
-
 
 /* =========================
    LEFT TEXT
 ========================= */
 
-.cashout{
+.bet-notify-box .cashout{
     position:absolute;
     left:42px;
     top:11px;
@@ -235,14 +232,14 @@ body {
     text-align:center;
 }
 
-.cashout .title{
+.bet-notify-box .cashout .title{
     font-size:12px;
     font-weight:600;
     line-height:12px;
     margin-bottom:4px;
 }
 
-.cashout .multi{
+.bet-notify-box .cashout .multi{
     font-size:15px;
     font-weight:700;
     color:#d8efff;
@@ -253,7 +250,7 @@ body {
    WIN GREEN BOX
 ========================= */
 
-.win-box{
+.bet-notify-box .win-box{
     position:absolute;
     right:48px;
     top:4px;
@@ -269,8 +266,8 @@ body {
 }
 
 /* stars */
-.win-box::before,
-.win-box::after{
+.bet-notify-box .win-box::before,
+.bet-notify-box .win-box::after{
     content:"✩";
     position:absolute;
     top:7px;
@@ -278,21 +275,21 @@ body {
     font-size:14px;
 }
 
-.win-box::before{
+.bet-notify-box .win-box::before{
     left:10px;
 }
 
-.win-box::after{
+.bet-notify-box .win-box::after{
     right:10px;
 }
 
-.win-title{
+.bet-notify-box .win-title{
     font-size:12px;
     font-weight:700;
     line-height:12px;
 }
 
-.win-amount{
+.bet-notify-box .win-amount{
     font-size:15px;
     font-weight:800;
     margin-top:2px;
@@ -302,7 +299,7 @@ body {
    CLOSE BUTTON
 ========================= */
 
-.close-btn{
+.bet-notify-box .close-btn{
     position:absolute;
     right:12px;
     top:14px;
@@ -323,9 +320,13 @@ body {
     transition:.2s;
 }
 
-.close-btn:hover{
+.bet-notify-box .close-btn:hover{
     background:rgba(255,255,255,.08);
     color:white;
+}
+
+.show{
+    display: block !important;
 }
 
 /* optional floating animation */
@@ -335,7 +336,7 @@ body {
     100%{transform:translateY(0px);}
 }
 
-.notify-box{
+.bet-notify-box{
     animation:floaty 2.5s ease-in-out infinite;
 }
 
