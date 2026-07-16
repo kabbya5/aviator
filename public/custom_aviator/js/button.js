@@ -1,6 +1,5 @@
 // ACtion js
 var user_id = $('#user_id').val();
-var round_id = $('#round_id').val();
 var userBalance = parseFloat($('#total-balance').text());
 
 $(window).on('load', function () {
@@ -85,23 +84,47 @@ function resetBtn(){
     });
 }
 
+function deleteTempBets(){
+    $.ajax({
+        url: "/aviator/delete/temp/bets",
+        type: "GET",
+        data:{user_id:user_id},
+        success: function (res) {
+            console.log(res);
+        },
+    });
+}
+
 
 $(document).ready(function () {
     $.ajax({
         url: "/aviator/check/bets",
         type: "GET",
         success: function (res) {
-            res.bets.forEach(element => {
-                buttonStatus(element);
-            });
+            // res.bets.forEach(element => {
+            //     buttonStatus(element);
+            // });
 
             res.running_bets.forEach(element => {
                 buttonStatus(element,'running');
-                
             });
         },
     });
 });
+
+function updatePreviousBets(view, crash_point){
+    var multy_class = 'small';
+    $('.previous-bets').find('.result-multiplier').text(crash_point);
+
+    if(crash_point > 7){
+        multy_class = 'big';
+    }else if(crash_point > 2){
+        multy_class = 'medium';
+    }
+    $('.previous-bets').find('.result-multiplier').addClass(multy_class);
+
+    $('.previous-bets').find('.bet-items').html(view);
+}
 
 function tabsData(type){
     $.ajax({
@@ -110,18 +133,9 @@ function tabsData(type){
         data:{type:type},
         success: function (res) {
             if(type == 'previous-bets'){
-                var multy_class = 'small';
-                $('.previous-bets').find('.result-multiplier').text(res.crash_point);
-
-                if(res.crash_point > 7){
-                    multy_class = 'big';
-                }else if(res.crash_point > 2){
-                    multy_class = 'medium';
-                }
-                $('.previous-bets').find('.result-multiplier').addClass(multy_class);
-
-                $('.previous-bets').find('.bet-items').html(res.view);
+                updatePreviousBets(res.view, res.crash_point);
             }
+
         },
     });
 }
@@ -307,6 +321,7 @@ function betCashout(parent,amount,bet_id){
         url: '/aviator/cashout/bet',
         method: 'get',
         data: {
+            round_id:round_id,
             bet_id:bet_id,
             user_id: user_id,
             amount:amount,
@@ -336,6 +351,14 @@ function betCashout(parent,amount,bet_id){
 
             userBalance += parseFloat(res.bet.win_amount);
             $('#total-balance').text(userBalance.toFixed(2));
+
+            if(res.updateCrushPoint){
+                const r = Math.random();
+                const crashPoint = Math.min((1 / (1 - r)).toFixed(2), 200);
+                socket.emit('update_crash_point',{
+                    crashPoint:crashPoint
+                });
+            }
         }
     });
 }
@@ -420,13 +443,14 @@ function rand(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+var total_payout = 0;
 
 function betAutoCashout() {
 
     let progress = 0;
 
-    if (multiplier < 1.5) {
-        progress = 0;
+    if (multiplier < 1.5 && multiplier > 1.2) {
+        progress = 10
     } else if (multiplier < 3) {
         progress = 10 + ((multiplier - 1.5) / 1.5) * 50;
     } else if (multiplier < 10) {
@@ -462,6 +486,14 @@ function betAutoCashout() {
             $('#total-win').text(total_win.toFixed(2));
         }
     });
+
+    var actual_bets = parseInt($('#payout-bet').data('total_bets')) || 0;
+    
+    if(progress > 0){
+        total_payout = parseInt(actual_bets * (progress / 100));
+        $('#payout-bet').text(total_payout); 
+    }
+   
 }
 
 

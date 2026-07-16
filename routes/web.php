@@ -2,13 +2,14 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AviatorController;
+use App\Http\Controllers\Admin\AdminAviatorControlController;
 
 Route::get('/', function () {
     return view('welcome');
 });
 
 Route::get('/test', function () {
-    return view('test2');
+    return view('test3');
 });
 
 
@@ -20,6 +21,7 @@ Route::get('/aviator/genetate/round', [AviatorController::class, 'generateRound'
 Route::get('/aviator/start/round', [AviatorController::class, 'StartRound']);
 Route::get('/aviator/finished/round',  [AviatorController::class, 'finishRound']);
 Route::get('/aviator/crush/point', [AviatorController::class,'crashPoint']);
+Route::get('/aviator/temp/bet/delete', [AviatorController::class,'deleteTempBet'])->name('aviator.temp.bet.delete');
 
 Route::get('/aviator/check/bets',[AviatorController::class,'checkBet'])->name('aviator.check.bets');
 Route::post('/aviator/place/bet', [AviatorController::class, 'placeBet'])->name('aviator.place.bet');
@@ -27,3 +29,11 @@ Route::post('/aviator/cancel/bet', [AviatorController::class, 'cancelBet'])->nam
 Route::get('/aviator/cashout/bet', [AviatorController::class, 'cashout'])->name('aviator.cashout');
 
 Route::get('/aviator/tabs/data', [AviatorController::class, 'tabsData']);
+
+Route::get('/admin/dashboard', function(){
+    //
+})->name('admin.dashboard');
+
+Route::get('/admin/aviator/dashboard', [AdminAviatorControlController::class, 'aviatorDashboard'])->name('admin.aviator.dashboard');
+Route::get('/admin/aviator/transaction', [AdminAviatorControlController::class, 'transactions'])->name('admin.aviator.transactions');
+Route::get('/aviator/live/bets',[AdminAviatorControlController::class, 'liveBets']);

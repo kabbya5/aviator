@@ -50,30 +50,46 @@ class AviatorController extends Controller
 
     public function generateRound()
     {
-        $todate = date('Y-m-d');
+        $today = now()->format('Y-m-d');
 
-        $round = AviatorRound::whereDate('created_at', $todate)
-            ->orderBy('id', 'desc')
+        $round = AviatorRound::whereDate('created_at', $today)
+            ->orderByDesc('id')
             ->first();
 
-        $round_no = null;
+        if ($round) {
 
-        if (!$round) {
+            $round_no = $round->round_id;
 
-            $round_no = date('Ymd') . '00001';
+            // Date part (YYYYMMDD)
+            $prefix = substr($round_no, 0, 8);
+
+            // Sequence part (last 6 digits)
+            $last6 = substr($round_no, -6);
+
+            $last6 = (int) $last6 + 1;
+
+            if ($last6 > 999999) {
+                $last6 = 1;
+            }
+
+            $round_no = $prefix . str_pad($last6, 6, '0', STR_PAD_LEFT);
 
         } else {
 
-            $round_no = $round->round_id + 1;
+            // First round of the day
+            $round_no = now()->format('Ymd') . '000001';
         }
 
-        $exist = AviatorRound::where('round_id', $round_no)->exists();
+        while (AviatorRound::where('round_id', $round_no)->exists()) {
 
-        while ($exist) {
+            $prefix = substr($round_no, 0, 8);
+            $last6 = (int) substr($round_no, -6) + 1;
 
-            $round_no += 1;
+            if ($last6 > 999999) {
+                $last6 = 1;
+            }
 
-            $exist = AviatorRound::where('round_id', $round_no)->exists();
+            $round_no = $prefix . str_pad($last6, 6, '0', STR_PAD_LEFT);
         }
 
         AviatorRound::create([
@@ -82,14 +98,15 @@ class AviatorController extends Controller
         ]);
 
         $bots = AviatorBot::get();
+        $old_bots = $bots;
 
         $change =  rand(1,5);
 
         $amounts = [
             1050,2080,5030,3090,4080,6080,7080,1500,1800,2500,3000,4000,700,4500,3500,10,15,20,
-            6010, 9020, 50070, 1800, 1200, 6500,3500,3800,8020,5300,4700,2800,1020,2030,1040,
-            1000, 2000, 5000, 10000, 14000,8000,9000,1000,200,
-            15000, 20000, 25000, 30000
+            6010, 9020, 50070, 1800, 1200, 6500,3500,3800,8020,5300,4700,2800,1020,2030,1040,500, 600, 700, 800, 900, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000,
+            1000, 2000, 5000, 10000, 14000,8000,9000,1000,200, 7000, 8000, 9000, 10000, 12000, 13000, 14000, 15000, 16000, 17000, 18000, 19000,
+            15000, 20000, 25000, 30000,10000, 50000, 100000, 200000, 300000, 400000, 500000, 600000, 700000, 800000, 900000,
         ];
 
         foreach($bots as $bot){
@@ -113,6 +130,8 @@ class AviatorController extends Controller
             'round_no' => $round_no,
             'bets' => $bots,
             'total_bets' => $bot->count() + rand(500,5000),
+            'view' => view('aviator._tabs.previous_bets', compact('bots','round'))->render(),
+            'crash_point' => $round->crash_point,
         ]);
     }
 
@@ -156,15 +175,14 @@ class AviatorController extends Controller
     }
 
     public function crashPoint(Request $request){
-        
         $round_id = $request->round_id;
         $round = AviatorRound::where('round_id', $round_id)->first();
-
+    
         $temp_bets = TempAviatorBet::all();
         foreach($temp_bets as $bet){
             AviatorBet::create([
                 'user_id' => $bet->user_id,
-                'aviator_round_id' => $bet->aviator_round_id,
+                'aviator_round_id' => $round->id,
                 'bet_amount' => $bet->bet_amount,
                 'auto_cashout' => $bet->auto_cashout,
                 'auto_bet' => $bet->auto_bet ?? 0,
@@ -179,27 +197,30 @@ class AviatorController extends Controller
         $bets = DB::table('aviator_bets')
                     ->select('bet_amount', 'win_amount')
                     ->orderByDesc('id')
-                    ->limit(20000)
+                    ->limit(40000)
                     ->get();
 
-        $totalBet = $bets->sum('bet_amount');
-        $totalPayout = $bets->sum('win_amount');
-        $rtp = $totalBet > 0 ? ($totalPayout / $totalBet) * 100 : 0;
-
         $houseEdge = 0.99;
-
-
         $random = mt_rand() / mt_getrandmax();
 
         $multiplier = floor((100 * $houseEdge) / (1 - $random)) / 100;
 
+        $totalTempBet = $temp_bets->sum('bet_amount');
+        $totalBet = $bets->sum('bet_amount');
+        $totalPayout = $bets->sum('win_amount');
+        $houseEarning = $totalBet * 0.05;
+        $allawablePayout =  ($totalBet - $houseEarning) - $totalPayout;
+                
         if($temp_bets->count() > 0){
-            if ($rtp > 97) {
-                $multiplier = mt_rand(100, 200) / 100;
+            $random = mt_rand(1, 100);
+            if ($random <= 15) {
+                $multiplier = mt_rand(100, 580) / 100;
+            } else {
+                $faredMultiplier = $allawablePayout > 0 ? ($allawablePayout / $totalTempBet) : 1;
+                $multiplier = min($multiplier, $faredMultiplier);
             }
         }
-
-
+        $multiplier = 5;
         if($multiplier < 1){
             $multiplier = 1;
         }
@@ -292,25 +313,34 @@ class AviatorController extends Controller
     }
 
     public function cashout(Request $request){
-        $bet = AviatorBet::find($request->bet_id);
+        $round_id = $request->round_id;
         $user = User::find($request->user_id);
         $user->increment('total_balance', $request->amount);
+        $round = AviatorRound::where('round_id', $round_id)->first();
 
-        if(!$bet){
-            $bet = AviatorBet::where('class_name',$request->class_name)->where('status','pending')->first();
-        }
-
+        $bet = AviatorBet::where('class_name',$request->class_name)->where('aviator_round_id', $round->id)->where('user_id',$request->user_id)->where('status','pending')->first();
+        
         $bet->update([
             'win_amount' => $request->amount,
             'status' => 'complete',
-            'after_amount' => $request->amount,
+            'after_amount' => $user->total_balance + $request->amount,
+            'before_amount'  => $user->total_balance,
         ]);
 
-        if($bet->auto_bet){
-            $user->decrement('total_balance',$bet->bet_amount);
+        $user->increment('total_balance', $request->amount);
+
+        $round = AviatorRound::with('aviatorBets')->where('round_id', $round_id)->first();
+        $total_bet = $round->aviatorBets()->count();
+        $complete_bet = $round->aviatorBets()->where('status', 'complete')->count();
+        $updateCrushPoint = false;
+        if($total_bet == $complete_bet){
+            $updateCrushPoint = true;
         }
 
-        return response()->json(['bet' => $bet]);
+        return response()->json([
+            'bet' => $bet,
+            'updateCrushPoint' => $updateCrushPoint,
+        ]);
     }
 
     public function checkBet(){
@@ -355,5 +385,15 @@ class AviatorController extends Controller
                 'crash_point' => $round->crash_point,
             ]);
         }
+    }
+
+    public function deleteTempBet(Request $request){
+        $user_id = $request->user_id;
+        TempAviatorBet::where('user_id', $user_id)->delete();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Temp bets deleted successfully',
+        ]);
     }
 }

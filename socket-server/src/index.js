@@ -3,6 +3,7 @@ const {Server} = require('socket.io');
 
 const roomEvents = require('./roomEvents');
 const aviatorEvents = require('./aviator/events');
+const aviatorEnigine = require('./aviator/enigine');
 
 const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
@@ -20,7 +21,7 @@ const io = new Server(server, {
 });
 
 io.on('connection', socket => {
-    roomEvents(io, socket);
+    // roomEvents(io, socket);
     aviatorEvents(io, socket);
 });
 

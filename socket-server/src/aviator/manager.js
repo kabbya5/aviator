@@ -1,3 +1,4 @@
+const axios = require('axios');
 let Enigine = require('./enigine');
 
 class Manager {
@@ -91,9 +92,17 @@ class Manager {
         }
     }
 
-    handleDisconnect(socket) {
+    handleDisconnect(socket, reason) {
 
-        const { roomKey } = socket;
+        const { roomKey,user_id } = socket;
+
+        // if(user_id){
+        //     axios.get('http://127.0.0.1:8000/aviator/temp/bet/delete', {
+        //         params: {
+        //             user_id: user_id
+        //         }
+        //     });
+        // }
 
         if (!roomKey || !this.users[roomKey]) return;
 
@@ -104,6 +113,14 @@ class Manager {
         this.io.to(roomKey).emit('user:update', {
             users: this.users[roomKey] || []
         });
+    }
+
+    forceCrash(point = 1){
+        this.room.forceCrash(point);
+    }
+
+    updateCrashPoint(point){
+        this.room.updateCrashPoint(point);
     }
 }
 

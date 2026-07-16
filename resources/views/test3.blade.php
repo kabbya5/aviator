@@ -1,440 +1,3 @@
-
-Conversation with Gemini
-const axios = require('axios');
-
-
-
-class Enigine {
-
-
-
-constructor(io, roomName) {
-
-
-
-this.io = io;
-
-this.roomName = roomName;
-
-
-
-this.roundId = null;
-
-
-
-this.betTime = 5;
-
-this.timeLeft = this.betTime;
-
-
-
-this.multiplier = 1.00;
-
-this.crashPoint = 1;
-
-this.isCrash = false;
-
-
-
-this.betTimer = null;
-
-this.gameTimer = null;
-
-this.progress = 0;
-
-this.speed = 2;
-
-let roundStartTime = 0;
-
-}
-
-
-
-async storeRound(retry = 0) {
-
-try {
-
-const response = await axios.get('http://127.0.0.1:8000/aviator/genetate/round');
-
-this.roundId = response.data.round_no;
-
-const bets = response.data.bets;
-
-const total_bets = response.data.total_bets;
-
-this.io.to(this.roomName).emit('bet:update',{
-
-bets:bets,
-
-total_bets:total_bets,
-
-privious_crash_point:response.data.crash_point,
-
-view:response.data.view,
-
-});
-
-
-
-if(this.roundId){
-
-this.startBetting();
-
-}
-
-}catch (err) {
-
-if (retry >= 5) {
-
-return;
-
-}
-
-
-
-setTimeout(() => {
-
-this.storeRound(retry + 1);
-
-}, 2000);
-
-}
-
-}
-
-
-
-start() {
-
-this.storeRound();
-
-}
-
-
-
-startBetting() {
-
-// reset values
-
-this.timeLeft = this.betTime;
-
-this.multiplier = 1.00;
-
-this.isCrash = false;
-
-this.progress = 0;
-
-this.speed = 0.013;
-
-
-
-// notify frontend
-
-this.io.to(this.roomName).emit("round:new", {
-
-roundId: this.roundId,
-
-bettingTime: this.betTime
-
-});
-
-
-
-// betting countdown
-
-this.betTimer = setInterval(() => {
-
-
-
-this.timeLeft--;
-
-
-
-this.io.to(this.roomName).emit("betting:timer", {
-
-time: this.timeLeft
-
-});
-
-
-
-if (this.timeLeft <= 0) {
-
-
-
-clearInterval(this.betTimer);
-
-
-
-// close betting
-
-this.io.to(this.roomName).emit("bet:close");
-
-
-
-// start crash point
-
-this.generateCrashPoint()
-
-}
-
-
-
-}, 1000);
-
-}
-
-
-
-async finishRound(crashPoint, retry = 0) {
-
-try {
-
-const response = await axios.get('http://127.0.0.1:8000/aviator/finished/round', {
-
-params: {
-
-round_id: this.roundId,
-
-crash_point: crashPoint
-
-}
-
-});
-
-
-
-this.roundId = null;
-
-
-
-setTimeout(() => {
-
-this.storeRound();
-
-}, 3000);
-
-
-
-} catch (err) {
-
-
-
-console.error(err);
-
-
-
-if (retry >= 5) {
-
-return;
-
-}
-
-
-
-setTimeout(() => {
-
-this.finishRound(crashPoint, retry + 1);
-
-}, 2000);
-
-}
-
-}
-
-
-
-startGame() {
-
-this.roundStartTime = Date.now();
-
-
-
-this.io.to(this.roomName).emit("round:start", {
-
-roundId: this.roundId
-
-});
-
-
-
-this.gameTimer = setInterval(() => {
-
-const elapsedTime = Date.now() - this.roundStartTime;
-
-// increase multiplier
-
-if(this.multiplier > 3){
-
-this.speed += 0.0002;
-
-}
-
-// this.speed += 0.0002;
-
-
-
-this.progress += this.speed;
-
-
-
-this.multiplier += (
-
-this.speed * 1.2
-
-);
-
-
-
-// send multiplier update
-
-this.io.to(this.roomName).emit("multiplier:update", {
-
-multiplier: parseFloat(this.multiplier.toFixed(2)),
-
-progress: this.progress,
-
-speed: this.speed,
-
-crashPoint: parseFloat(this.crashPoint.toFixed(2)),
-
-elapsedTime: elapsedTime,
-
-});
-
-
-
-// crash
-
-if (this.multiplier >= this.crashPoint) {
-
-this.isCrash = true;
-
-clearInterval(this.gameTimer);
-
-this.progress = 0.015;
-
-this.speed = 0.013;
-
-
-
-this.finishRound(this.multiplier);
-
-
-
-this.io.to(this.roomName).emit("round:crash", {
-
-multiplier: this.multiplier,
-
-crashed: true,
-
-roundId: this.roundId,
-
-progress: this.progress,
-
-speed: this.speed
-
-});
-
-}
-
-
-
-}, 100);
-
-}
-
-
-
-async generateCrashPoint(retry = 0) {
-
-try {
-
-const response = await axios.get('http://127.0.0.1:8000/aviator/crush/point',{
-
-params: {
-
-round_id: this.roundId,
-
-}
-
-});
-
-
-
-if(response.data.crash_point > 0){
-
-this.crashPoint = response.data.crash_point;
-
-this.startGame();
-
-}
-
-
-
-} catch (err) {
-
-
-
-if (retry >= 5) {
-
-return;
-
-}
-
-
-
-setTimeout(() => {
-
-this.generateCrashPoint( retry + 1);
-
-}, 2000);
-
-}
-
-}
-
-
-
-forceCrash(crushPoint){
-
-this.crashPoint = this.multiplier;
-
-}
-
-
-
-updateCrashPoint(point){
-
-console.log(point);
-
-this.crashPoint += point;
-
-}
-
-}
-
-
-
-module.exports = Enigine;
-
-
-
-
-
-this is socket engine file is play fly animation.
-
-adjust this with socket
-
-Here is how you can seamlessly bridge your backend Socket.io game engine with the frontend HTML Canvas code.
-
-To achieve this, we will replace the static button simulation controls on the frontend with active Socket.io event listeners that listen directly to the events emitted by your Node.js Engine class.
-
-1. Modified Frontend HTML (Socket.io Integrated)
-Replace the script section of your HTML file with the code below. It imports the Socket.io client library and listens directly to your Node.js server's emitted events:  
-PHP
-
-HTML
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -443,8 +6,6 @@ HTML
     <title>Aviator Canvas Engine Demo</title>
     <!-- Include jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
-    <!-- Include Socket.io Client -->
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -479,12 +40,14 @@ HTML
             width: 100%;
             height: 400px;
             background: rgb(21,21,21);
+            /* Dark background sunburst simulation */
             background: radial-gradient(circle, rgba(29,29,29,1) 0%, rgba(10,10,10,1) 100%);
             border-radius: 8px;
             overflow: hidden;
             border: 1px solid #1c1e22;
         }
 
+        /* Sunburst lines decoration overlay */
         .canvas-container::before {
             content: '';
             position: absolute;
@@ -517,9 +80,41 @@ HTML
             width: 85px;
             height: auto;
             pointer-events: none;
+            /* transform-origin set to center ensures rotation and centering math aligned */
             transform-origin: center center;
+            /* Hardware-accelerated transitions for smooth micro-movements */
             will-change: left, top, transform;
             transition: transform 0.05s linear;
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background-color: #2c3038;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid #3d434f;
+        }
+
+        button:hover {
+            background-color: #3d434f;
+        }
+
+        button.active-btn {
+            background-color: #e20630;
+            border-color: #ff2b52;
         }
 
         .status-badge {
@@ -539,10 +134,18 @@ HTML
     <div class="game-wrapper">
         <div class="canvas-container">
             <canvas id="aviatorGameCanvas"></canvas>
-            <img id="plane" src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExdWp3d2E1dGRpdDZjcTVqN3p0cnR4b2gyOHR6eGlkNmpxNm5wZnFjNyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/E63Fv6shXstBv26eS0/giphy.gif" alt="Aviator Plane">
+            <img id="plane" src="{{ asset('custom_aviator/img/animation-aviator.gif') }}" alt="Aviator Plane">
+        </div>
+
+        <!-- Simulated Server Control Hooks -->
+        <div class="controls">
+            <button id="btn-waiting" class="active-btn">1. Waiting Screen</button>
+            <button id="btn-loading">2. Load (1.00x)</button>
+            <button id="btn-start">3. Start Flight</button>
+            <button id="btn-crash">4. Crash (Flew Away)</button>
         </div>
     </div>
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
     <script>
         (function($) {
             'use strict';
@@ -558,7 +161,7 @@ HTML
                 constructor(element, options = {}) {
                     this.$canvas = $(element);
                     this.ctx = this.$canvas[0].getContext('2d');
-                    this.$plane = $('#plane');
+                    this.$plane = $('#plane'); // Custom DOM image selector
                     
                     this.options = $.extend({
                         fontFamily: '"Arial", sans-serif',
@@ -574,7 +177,7 @@ HTML
                     this.planeY = 0;
                     this.prevPlaneX = 0;
                     this.prevPlaneY = 0;
-                    this.maxReachedTime = null;
+                    this.maxReachedTime = null; // To keep track of when max height/width was attained
 
                     this.init();
                 }
@@ -594,17 +197,18 @@ HTML
                     if (this.state === STATES.LOADING) this.startLoading();
                 }
 
-                renderWaitingState(timeText = "WAITING FOR NEXT ROUND") {
+                renderWaitingState() {
                     this.state = STATES.WAITING;
-                    this.maxReachedTime = null;
+                    this.maxReachedTime = null; // Reset track timestamp
                     this.prevPlaneX = 0;
                     this.prevPlaneY = 0;
-                    this.$plane.hide();
+                    this.$plane.hide(); // Hide custom flight image inside waiting space
                     
                     const w = this.$canvas.width();
                     const h = this.$canvas.height();
                     this.ctx.clearRect(0, 0, w, h);
 
+                    // Replicating Partner Promo layout safely inside canvas view 
                     this.ctx.textAlign = 'center';
                     this.ctx.textBaseline = 'middle';
                     
@@ -614,16 +218,16 @@ HTML
 
                     this.ctx.font = `600 ${h * 0.04}px ${this.options.fontFamily}`;
                     this.ctx.fillStyle = '#FFFFFF';
-                    this.ctx.fillText(timeText, w / 2, h / 2 + 30);
+                    this.ctx.fillText('WAITING FOR NEXT ROUND', w / 2, h / 2 + 30);
                 }
 
                 startLoading() {
                     this.state = STATES.LOADING;
-                    this.maxReachedTime = null;
+                    this.maxReachedTime = null; // Reset track timestamp
                     this.prevPlaneX = 0;
                     this.prevPlaneY = 0;
                     this.multiplier = 1.00;
-                    this.$plane.hide();
+                    this.$plane.hide(); // Keep image hidden during loading screens
                     this.renderStaticState("1.00x", "#FFFFFF");
                 }
 
@@ -631,14 +235,19 @@ HTML
                     this.state = STATES.FLYING;
                     this.multiplier = parseFloat(currentMultiplier);
                     
+                    // 1. Get the actual canvas dimensions
                     const canvasW = this.$canvas.width();
                     const canvasH = this.$canvas.height();
 
+                    // 2. Clear the ENTIRE canvas area to prevent trail artifacts
                     this.ctx.clearRect(0, 0, canvasW, canvasH);
 
+                    // 3. Define the maximum bounding box boundaries for the path
+                    // We constrain base width to 75% to leave a safe 25% margin for the +20% width oscillation
                     const w = canvasW * 0.75; 
                     const h = canvasH * 0.80; 
 
+                    // Progress tracing (caps at 1.0). Flight time reduced to 8000ms for faster ascent!
                     const maxLimit = 1.0;
                     let progress = elapsedMs / 8000; 
                     if (progress >= maxLimit) {
@@ -663,21 +272,25 @@ HTML
                             targetY += maxDeltaY * factor;     
                             targetX += maxDeltaX * factor;     
                         } else {
+                            // Phase 2 (Next 2 Seconds): Increase height (decrease Y coordinate) and decrease width
                             const factor = (cycleTime - 2) / 2; 
                             targetY += maxDeltaY * (1 - factor); 
                             targetX += maxDeltaX * (1 - factor); 
                         }
                     }
 
+                    // Cache previous position to calculate movement angle
                     if (this.prevPlaneX === 0) {
                         this.prevPlaneX = targetX;
                         this.prevPlaneY = targetY;
                     }
 
+                    // Calculate rotation angle matching vector progress tangent slopes
                     const deltaX = targetX - this.prevPlaneX;
                     const deltaY = targetY - this.prevPlaneY;
                     let angle = Math.atan2(deltaY, deltaX);
 
+                    // Force plane level straight at maximum limits to prevent jitter oscillations
                     if (this.maxReachedTime !== null) {
                         const cycleTime = ((elapsedMs - this.maxReachedTime) / 1000) % 4;
                         if (cycleTime >= 1.9 && cycleTime <= 2.1) {
@@ -688,15 +301,18 @@ HTML
                     this.planeX = targetX;
                     this.planeY = targetY;
                     
+                    // Update trace parameters
                     this.prevPlaneX = targetX;
                     this.prevPlaneY = targetY;
 
+                    // 5. Apply dynamic positioning and rotation to the plane image element
                     this.$plane.show().css({
                         left: `${targetX}px`,
                         top: `${targetY}px`,
                         transform: `translate(-25%, -55%)`
                     });
 
+                    // 6. Draw path and text elements
                     this.drawDynamicGlow(canvasW, canvasH);
                     this.drawFlightPath();
                     this.drawMultiplierText(`${this.multiplier.toFixed(2)}x`, "#FFFFFF");
@@ -704,22 +320,24 @@ HTML
 
                 triggerCrash(finalMultiplier) {
                     this.state = STATES.CRASHED;
-                    this.maxReachedTime = null;
+                    this.maxReachedTime = null; // Reset track timestamp
                     this.prevPlaneX = 0;
                     this.prevPlaneY = 0;
-                    this.$plane.hide();
+                    this.$plane.hide(); // Hide plane overlay upon cash out/crash
 
                     const w = this.$canvas.width();
                     const h = this.$canvas.height();
                     this.ctx.clearRect(0, 0, w, h);
 
+                    // Render exact "FLEW AWAY!" display overlay text
                     this.drawMultiplierText(`${finalMultiplier.toFixed(2)}x`, "#E20630", "FLEW AWAY!");
                 }
 
                 drawDynamicGlow(w, h) {
-                    let glowColor = "rgba(0, 162, 255, 0.09)";
+                    // Shifting glow theme depending on high-multiplier states
+                    let glowColor = "rgba(0, 162, 255, 0.09)"; // Flight path blue
                     if (this.multiplier >= 2.0) {
-                        glowColor = "rgba(157, 23, 247, 0.18)";
+                        glowColor = "rgba(157, 23, 247, 0.18)"; // Target purple tracking hue
                     }
 
                     const gradient = this.ctx.createRadialGradient(
@@ -749,6 +367,7 @@ HTML
                     this.ctx.lineWidth = 3;
                     this.ctx.stroke();
 
+                    // Create background fill loop shape bounded perfectly underneath
                     this.ctx.lineTo(this.planeX, startY);
                     this.ctx.lineTo(startX, startY);
                     this.ctx.fillStyle = this.options.fillColor;
@@ -794,57 +413,79 @@ HTML
 
         /**
          * ----------------------------------------------------
-         * SOCKET.IO CONTROLLER HOOKS
+         * APPLICATION CONTROLLER LOGIC
          * ----------------------------------------------------
          */
         $(document).ready(function() {
-            // Instantiate canvas configuration
+            // Instantiate plugin connection setup
             const $canvas = $('#aviatorGameCanvas').aviatorEngine();
             const engine = $canvas.data('aviator_engine');
 
-            // Connect to your Node.js Socket server (adjust the URL if running on a separate port/domain)
-            const socket = io(); 
+            let loopInterval = null;
+            let flightStartTime = null;
+            let mockMultiplier = 1.00;
 
-            // Track state updates in the header badge
             function updateStateUI(stateName) {
                 $('#state-text').text(stateName);
+                $('.controls button').removeClass('active-btn');
             }
 
-            // 1. Betting Starts (Waiting Round Countdown)
-            socket.on("round:new", (data) => {
-                updateStateUI('BETTING');
-                engine.renderWaitingState(`PLACE YOUR BETS: ${data.bettingTime}s`);
+            function clearFlightInterval() {
+                if (loopInterval) {
+                    clearInterval(loopInterval);
+                    loopInterval = null;
+                }
+            }
+
+            // 1. Trigger Waiting Phase Display Hook
+            $('#btn-waiting').on('click', function() {
+                clearFlightInterval();
+                updateStateUI('WAITING');
+                $(this).addClass('active-btn');
+                engine.renderWaitingState();
             });
 
-            // 2. Countdown Updates
-            socket.on("betting:timer", (data) => {
-                engine.renderWaitingState(`PLACE YOUR BETS: ${data.time}s`);
-            });
-
-            // 3. Round Closes (Preparing / Loading Screen)
-            socket.on("bet:close", () => {
-                updateStateUI('PREPARING');
+            // 2. Trigger Pre-game Loading Phase Display Hook
+            $('#btn-loading').on('click', function() {
+                clearFlightInterval();
+                updateStateUI('LOADING');
+                $(this).addClass('active-btn');
                 engine.startLoading();
             });
 
-            // 4. Game Loop / Plane Starts Ascending
-            socket.on("round:start", () => {
+            // 3. Trigger Active Simulation Engine Loops
+            $('#btn-start').on('click', function() {
+                clearFlightInterval();
                 updateStateUI('FLYING');
+                $(this).addClass('active-btn');
+
+                flightStartTime = Date.now();
+                mockMultiplier = 1.00;
+
+                // Loop frame cycle step simulation
+                loopInterval = setInterval(() => {
+                    const elapsed = Date.now() - flightStartTime;
+                    
+                    // Progressive math curve scaling matching typical game parameters (scaled faster for rapid climb!)
+                    mockMultiplier += 0.005 * Math.pow(elapsed / 1000, 1.2);
+                    
+                    // Feed current dynamic status details down to engine
+                    engine.updateFlight(mockMultiplier, elapsed);
+                }, 30); // ~33 FPS smooth tracing loop refresh rate
             });
 
-            // 5. Plane flight coordinates & progress updating
-            socket.on("multiplier:update", (data) => {
-                // Using multiplier and elapsed time generated directly from node server
-                engine.updateFlight(data.multiplier, data.elapsedTime);
-            });
-
-            // 6. Round Crash (Flew Away)
-            socket.on("round:crash", (data) => {
+            // 4. Trigger Instant Round Crashed Termination Hook
+            $('#btn-crash').on('click', function() {
+                clearFlightInterval();
                 updateStateUI('CRASHED');
-                engine.triggerCrash(data.multiplier);
+                $(this).addClass('active-btn');
+                
+                // If it wasn't running, show a fixed mock value crash snapshot
+                if(mockMultiplier === 1.00) mockMultiplier = 4.18; 
+                
+                engine.triggerCrash(mockMultiplier);
             });
         });
     </script>
 </body>
 </html>
-

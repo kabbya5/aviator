@@ -12,7 +12,7 @@
 </head>
 
 <body id="aviator">
-    <input type="text" value="123" id="round_id" style="display:none">
+    <input type="text" value="{{$rounds->last()->round_id ?? 1}}" id="round_id" style="display:none">
     <input id="user_id" style="display:none" value="1">
 
     <div class="bet-notify-box">
@@ -100,7 +100,7 @@
                         </div>
 
                         <div class="bet-list">
-                            <div class="bet-items">
+                            <div class="bet-items runninge-bet-items">
                                 @foreach($bots as $key => $bot)
                                     <div class="bet-list-item bet-autocashout" data-bet_amount="{{$bot->bet_amount}}" data-cashout="{{$bot->cashout_point}}">
                                         <div class="item-column player">
@@ -290,7 +290,6 @@
                 </div>
 
                 <div class="play-board-wrapper">
-
                     <div class="aviator">
                         <div class="game-loading">
                             <div class="loading">
@@ -301,7 +300,10 @@
                                 <img src="{{asset('custom_aviator/img/loading-bottom.png')}}" alt="">
                             </div>
                         </div>
+
+                        <div class="glow-circle"></div>
                         <div class="rays"></div>
+
                         <div class="multiplier-wrapper">
                             <div class="multiplier-label">
                                 FLEW AWAY!
@@ -312,7 +314,7 @@
 
                         <div class="plan-arapper">
                             <canvas id="gameCanvas"></canvas>
-                            <img id="plane" src="{{ asset('custom_aviator/img/animation-aviator.gif') }}">
+                            <img id="plane" src="{{ asset('custom_aviator/img/plane.gif') }}">
                         </div>
                     </div>
                 </div>

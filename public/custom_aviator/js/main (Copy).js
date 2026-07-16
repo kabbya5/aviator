@@ -38,7 +38,7 @@ var round_id = $('#round_id').val();
         constructor(element, options = {}) {
             this.$canvas = $(element);
             this.ctx = this.$canvas[0].getContext('2d');
-            this.$plane = $('#plane');
+            this.$plane = $('#plane'); // Custom DOM image selector
             
             this.options = $.extend({
                 fontFamily: '"Arial", sans-serif',
@@ -54,7 +54,7 @@ var round_id = $('#round_id').val();
             this.planeY = 0;
             this.prevPlaneX = 0;
             this.prevPlaneY = 0;
-            this.maxReachedTime = null;
+            this.maxReachedTime = null; // To keep track of when max height/width was attained
 
             this.init();
         }
@@ -62,36 +62,32 @@ var round_id = $('#round_id').val();
         init() {
             this.resizeCanvas();
             $(window).on('resize', () => this.resizeCanvas());
-            this.renderWaitingState();
         }
 
         resizeCanvas() {
-            const $aviator = this.$canvas.closest('.aviator');
-
-            const width = $aviator.width();
-            const height = $aviator.height();
+            const width = this.$canvas.parent().width();
+            const height = this.$canvas.parent().height();
             this.$canvas.attr({ width, height });
             
-            if (this.state === STATES.WAITING) this.renderWaitingState();
-            if (this.state === STATES.LOADING) this.startLoading();
-        }
-
-        renderWaitingState(timeText = "WAITING FOR NEXT ROUND") {
-            //
-        }
-
-        startLoading() {
-            //
         }
 
         updateFlight(currentMultiplier, elapsedMs) {
+            this.state = STATES.FLYING;
+            this.multiplier = parseFloat(currentMultiplier);
+            
+            // 1. Get the actual canvas dimensions
             const canvasW = this.$canvas.width();
             const canvasH = this.$canvas.height();
+
+            // 2. Clear the ENTIRE canvas area to prevent trail artifacts
             this.ctx.clearRect(0, 0, canvasW, canvasH);
 
-            const w = canvasW * 0.80; 
-            const h = canvasH * 0.95; 
+            // 3. Define the maximum bounding box boundaries for the path
+            // We constrain base width to 75% to leave a safe 25% margin for the +20% width oscillation
+            const w = canvasW * 0.75; 
+            const h = canvasH * 0.80; 
 
+            // Progress tracing (caps at 1.0). Flight time reduced to 8000ms for faster ascent!
             const maxLimit = 1.0;
             let progress = elapsedMs / 8000; 
             if (progress >= maxLimit) {
@@ -101,86 +97,76 @@ var round_id = $('#round_id').val();
                 }
             }
 
-            // BASELINE DEFINITION: Changed start point from (canvasW * 0.05) directly to 0
-            let targetX = 0 + (w * progress);
-            let targetY = canvasH - (h * Math.pow(progress, 2)); // Curved exponential lift-off from canvasH (bottom)
+            let targetX = canvasW * 0.05 + (w - canvasW * 0.05) * progress;
+            let targetY = canvasH * 0.85 - (canvasH * 0.85 - (canvasH - h)) * Math.pow(progress, 2); 
 
-            // Handle extended flight bobbing logic smoothly 
             if (this.maxReachedTime !== null) {
                 const extendedTimeSec = (elapsedMs - this.maxReachedTime) / 1000;
                 const cycleTime = extendedTimeSec % 4;
 
-                const maxDeltaY = canvasH * 0.15; 
-                const maxDeltaX = canvasW * 0.10; 
+                const maxDeltaY = canvasH * 0.30; 
+                const maxDeltaX = canvasW * 0.20; 
 
                 if (cycleTime < 2) {
                     const factor = cycleTime / 2; 
                     targetY += maxDeltaY * factor;     
                     targetX += maxDeltaX * factor;     
                 } else {
+                    // Phase 2 (Next 2 Seconds): Increase height (decrease Y coordinate) and decrease width
                     const factor = (cycleTime - 2) / 2; 
                     targetY += maxDeltaY * (1 - factor); 
                     targetX += maxDeltaX * (1 - factor); 
                 }
             }
 
+            // Cache previous position to calculate movement angle
             if (this.prevPlaneX === 0) {
                 this.prevPlaneX = targetX;
                 this.prevPlaneY = targetY;
             }
 
+            // Calculate rotation angle matching vector progress tangent slopes
             const deltaX = targetX - this.prevPlaneX;
             const deltaY = targetY - this.prevPlaneY;
             let angle = Math.atan2(deltaY, deltaX);
 
+            // Force plane level straight at maximum limits to prevent jitter oscillations
+            if (this.maxReachedTime !== null) {
+                const cycleTime = ((elapsedMs - this.maxReachedTime) / 1000) % 4;
+                if (cycleTime >= 1.9 && cycleTime <= 2.1) {
+                    angle = 0;
+                }
+            }
+
             this.planeX = targetX;
             this.planeY = targetY;
             
+            // Update trace parameters
             this.prevPlaneX = targetX;
             this.prevPlaneY = targetY;
 
-            const t = Math.min(targetX / 40, 1);
-
-            const translateX = -10 + (-25 - (-10)) * t; // -10 -> -25
-            const translateY = -70 + (-55 - (-70)) * t; // -60 -> -50
-
+            // 5. Apply dynamic positioning and rotation to the plane image element
             this.$plane.show().css({
                 left: `${targetX}px`,
                 top: `${targetY}px`,
-                transform: `translate(${translateX}%, ${translateY}%)`
+                transform: `translate(-25%, -55%)`
             });
 
-            this.drawDynamicGlow(canvasW, canvasH);
+            // 6. Draw path and text elements
             this.drawFlightPath();
         }
 
-        triggerCrash(finalMultiplier) {
-            this.maxReachedTime = null;
-            this.prevPlaneX = 0;
-            this.prevPlaneY = 0;
-            const w = this.$canvas.width();
-            const h = this.$canvas.height();
-            this.ctx.clearRect(0, 0, w, h);
-
-        }
-
-        drawDynamicGlow(w, h) {
-           //
-        }
+     
 
         drawFlightPath() {
             const h = this.$canvas.height();
-            
-            // Set explicit 0 (left) and h (bottom) start anchors
-            const startX = 0;
-            const startY = h;
+            const startX = this.$canvas.width() * 0.05;
+            const startY = h * 0.85;
             
             this.ctx.beginPath();
             this.ctx.moveTo(startX, startY);
-            
-            // Draw smooth bezier curvature tracking from absolute bottom left
             this.ctx.quadraticCurveTo(
-                this.planeX * 0.4, startY, 
+                this.planeX * 0.5 + startX * 0.8, startY, 
                 this.planeX, this.planeY
             );
             
@@ -188,23 +174,22 @@ var round_id = $('#round_id').val();
             this.ctx.lineWidth = 3;
             this.ctx.stroke();
 
-            // Fill underneath the flight vector path cleanly
+            // Create background fill loop shape bounded perfectly underneath
             this.ctx.lineTo(this.planeX, startY);
             this.ctx.lineTo(startX, startY);
             this.ctx.fillStyle = this.options.fillColor;
             this.ctx.fill();
             this.ctx.closePath();
         }
+           triggerCrash(finalMultiplier) {
+            this.state = STATES.CRASHED;
+            this.maxReachedTime = null; // Reset track timestamp
+            this.prevPlaneX = 0;
+            this.prevPlaneY = 0;
 
-        drawMultiplierText(text, color, subtitle = "") {
-          //
-        }
-
-        renderStaticState(text, color) {
             const w = this.$canvas.width();
             const h = this.$canvas.height();
             this.ctx.clearRect(0, 0, w, h);
-            this.drawMultiplierText(text, color);
         }
     }
 
@@ -333,7 +318,6 @@ socket.on("round:new", (data) => {
 socket.on("betting:timer", data => {
     betStatus = 'bet';
     // Dynamically update canvas screen text to match server clock countdown ticker
-    engine.renderWaitingState(`PLACE YOUR BETS: ${data.time}s`);
 
     $('.bet-control').each(function () {
         $(this).data('waiting','');
@@ -353,7 +337,6 @@ socket.on("bet:close", () => {
     betStatus = 'running';
     gameLoading.removeClass('active');
     // Lock animations onto static 1.00x preparing mode
-    engine.startLoading();
 });
 
 socket.on("round:start", data => {
@@ -430,7 +413,7 @@ socket.on("round:crash", (data) => {
         transition: 'all 0.8s cubic-bezier(0.25, 1, 0.5, 1)',
         top: '-300px',
         left: ($(aviator).width() + 300) + 'px',
-        transform: 'translate(-50%, -50%) rotate(-15deg) scale(0.7)',
+        transform: 'translate(-50%, -50%) scale(0.7)',
         opacity: '0'
     });
 

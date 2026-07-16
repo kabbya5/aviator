@@ -48,8 +48,6 @@ class RoomManager {
             this.users[roomKey].push({ socketId: socket.id, user_id });
         }
 
-
-
         this.io.to(roomKey).emit('user:update', { users: this.users[roomKey] || [] });
     }
 

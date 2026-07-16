@@ -193,14 +193,70 @@
   overflow:hidden;
 }
 
+.game-play .play-board-wrapper .aviator .glow-circle{
+    position:absolute;
+    width:80%;
+    max-width:800px;
+    height:90%;
+    max-height:600px;
+    top:50%;
+    left:50%;
+    transform:translate(-50%, -50%);
+    border-radius:50%;
+   
+    filter: blur(25px);
+    animation:pulse 2s infinite ease-in-out;
+}
+
+.game-play .play-board-wrapper .aviator .glow-circle.small{
+    background: radial-gradient(
+        circle,
+        rgba(60,170,255,.55) 0%,
+        rgba(60,170,255,.35) 20%,
+        rgba(60,170,255,.18) 40%,
+        rgba(60,170,255,.08) 60%,
+        rgba(60,170,255,.03) 75%,
+        transparent 100%
+    );
+
+    filter: blur(40px);
+}
+.game-play .play-board-wrapper .aviator .glow-circle.medium{
+    background: radial-gradient(
+        circle,
+        rgba(145,62,248,.60) 0%,
+        rgba(145,62,248,.38) 20%,
+        rgba(145,62,248,.20) 40%,
+        rgba(145,62,248,.09) 60%,
+        rgba(145,62,248,.03) 75%,
+        transparent 100%
+    );
+
+    filter: blur(50px);
+}
+.game-play .play-board-wrapper .aviator .glow-circle.big{
+    background: radial-gradient(
+        circle,
+        rgba(255,50,210,.70) 0%,
+        rgba(255,50,210,.45) 20%,
+        rgba(255,50,210,.24) 40%,
+        rgba(255,50,210,.10) 60%,
+        rgba(255,50,210,.04) 75%,
+        transparent 100%
+    );
+
+    filter: blur(60px);
+}
+  
+
 .game-play .play-board-wrapper .aviator .rays{
     position:absolute;
     z-index: 0;
-    width:400%;
-    height:400%;
+    width:800%;
+    height:800%;
 
-    bottom:-200%;
-    left:-200%;
+    bottom:-400%;
+    left:-400%;
 
     border-radius:50%;
 
@@ -341,6 +397,11 @@
 
 .game-play .play-board-wrapper .aviator canvas{
     display: block;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    bottom: 0;
+    left: 0;
 }
 
 .game-play .play-board-wrapper .aviator #plane{
@@ -350,8 +411,8 @@
     pointer-events:none;
     transform-origin:center center;
     z-index:1;
-    bottom: 0;
-    left: 0;
+    bottom: -18px;
+    left: -14px;
 
     transition:
         left 0.03s linear,
@@ -369,6 +430,7 @@
 
 .game-play .bet-controls .controls {
     display: flex;
+    flex-direction: column;
     justify-content: center;
     width: 100%;
 }
@@ -800,10 +862,39 @@
     opacity: .5;
 }
 
+@media (max-width: 991px) {
+    .game-play .play-board-wrapper .aviator {
+        height: calc(100vh - 490px);
+    }
+
+    .game-play .bet-controls .controls .bet-control{
+        margin-bottom: 4px;
+    }
+
+    .game-play .bet-controls .controls .bet-control {
+        height: 100%;
+    }
+    .game-play .bet-controls .controls .controls {
+        height: fit-content;
+    }
+
+    .game-play .play-board-wrapper .multiplier-wrapper .multiplier-label {
+        font-size: 16px;
+    }
+
+    .game-play .play-board-wrapper .multiplier-wrapper .multiplier {
+        font-size: 40px;
+        font-weight: 500;
+    }
+}
+
 
 @media (min-width: 992px) {
     .game-container .game-play {
         width: calc(100% - 320px) !important;
+    }
+    .game-play .bet-controls .controls {
+        flex-direction:row;
     }
 }
 @media (min-width: 1200px) {
@@ -818,7 +909,19 @@
 }
 
 
+#plane {
 
+    will-change: transform,left,top;
+
+    transform-origin:center center;
+
+    backface-visibility:hidden;
+
+    perspective:1000px;
+
+    contain:layout style;
+
+}
 
 
 

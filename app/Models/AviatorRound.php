@@ -17,6 +17,6 @@ class AviatorRound extends Model
 
     public function aviatorBets()
     {
-        return $this->hasMany(AviatorBet::class, 'aviator_round_id', 'round_id');
+        return $this->hasMany(AviatorBet::class, 'aviator_round_id');
     }
 }

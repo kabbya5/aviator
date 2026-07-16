@@ -20,6 +20,7 @@ class Enigine {
         this.gameTimer = null;
         this.progress = 0;
         this.speed = 2;
+        let roundStartTime = 0;
     }
 
     async storeRound(retry = 0) {
@@ -31,6 +32,8 @@ class Enigine {
             this.io.to(this.roomName).emit('bet:update',{
                 bets:bets,
                 total_bets:total_bets,
+                privious_crash_point:response.data.crash_point,
+                view:response.data.view,
             });
 
             if(this.roundId){
@@ -57,7 +60,7 @@ class Enigine {
         this.multiplier = 1.00;
         this.isCrash = false;
         this.progress = 0;
-        this.speed = 0.002;
+        this.speed = 0.013;
 
         // notify frontend
         this.io.to(this.roomName).emit("round:new", {
@@ -118,34 +121,38 @@ class Enigine {
     }
 
     startGame() {
+        this.roundStartTime = Date.now();
+
         this.io.to(this.roomName).emit("round:start", {
             roundId: this.roundId
         });
 
         this.gameTimer = setInterval(() => {
-
-            // increase multiplier
+            const elapsedTime = Date.now() - this.roundStartTime;
+          
             this.speed += 0.0002;
 
             this.progress += this.speed;
 
             this.multiplier += (
-                this.speed * 1.4
+                this.speed * 0.12
             );
 
             // send multiplier update
             this.io.to(this.roomName).emit("multiplier:update", {
                 multiplier: parseFloat(this.multiplier.toFixed(2)),
                 progress: this.progress,
-                speed: this.speed
+                speed: this.speed, 
+                crashPoint: parseFloat(this.crashPoint.toFixed(2)),
+                elapsedTime: elapsedTime,
             });
 
             // crash
             if (this.multiplier >= this.crashPoint) {
                 this.isCrash = true;
                 clearInterval(this.gameTimer);
-                this.progress = 0;
-                this.speed = 0.002;
+                this.progress = 2;
+                this.speed = 0.013;
 
                 this.finishRound(this.multiplier);
 
@@ -158,7 +165,7 @@ class Enigine {
                 });
             }
 
-        }, 100);
+        }, 30);
     }
 
     async generateCrashPoint(retry = 0) {
@@ -184,6 +191,14 @@ class Enigine {
                 this.generateCrashPoint( retry + 1);
             }, 2000);
         }
+    }
+
+    forceCrash(crushPoint){
+        this.crashPoint = this.multiplier;
+    }
+
+    updateCrashPoint(point){
+        this.crashPoint += point;
     }
 }
 
