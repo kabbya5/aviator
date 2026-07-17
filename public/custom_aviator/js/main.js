@@ -27,13 +27,6 @@ var round_id = $('#round_id').val();
 (function($) {
     'use strict';
 
-    const STATES = {
-        WAITING: 'waiting',
-        LOADING: 'loading',
-        FLYING: 'flying',
-        CRASHED: 'crashed'
-    };
-
     class AviatorEngine {
         constructor(element, options = {}) {
             this.$canvas = $(element);
@@ -47,7 +40,6 @@ var round_id = $('#round_id').val();
                 planeColor: '#E20630'
             }, options);
 
-            this.state = STATES.WAITING;
             this.multiplier = 1.00;
             
             this.planeX = 0;
@@ -55,14 +47,13 @@ var round_id = $('#round_id').val();
             this.prevPlaneX = 0;
             this.prevPlaneY = 0;
             this.maxReachedTime = null;
-
+            this.device = null;
             this.init();
         }
 
         init() {
             this.resizeCanvas();
             $(window).on('resize', () => this.resizeCanvas());
-            this.renderWaitingState();
         }
 
         resizeCanvas() {
@@ -72,26 +63,36 @@ var round_id = $('#round_id').val();
             const height = $aviator.height();
             this.$canvas.attr({ width, height });
             
-            if (this.state === STATES.WAITING) this.renderWaitingState();
-            if (this.state === STATES.LOADING) this.startLoading();
-        }
+            const screenWidth = window.innerWidth; 
 
-        renderWaitingState(timeText = "WAITING FOR NEXT ROUND") {
-            //
-        }
-
-        startLoading() {
-            //
+            if (screenWidth < 768) {
+                this.device = 'mobile';
+            } else if (screenWidth < 1024) {
+            this.device = 'tablet';
+            } else {
+                this.device = 'desktop';
+            }
         }
 
         updateFlight(currentMultiplier, elapsedMs) {
             const canvasW = this.$canvas.width();
             const canvasH = this.$canvas.height();
+            
+            let w = canvasW * 0.85; 
+            let h = canvasH * 0.95; 
+            let maxDeltaY = canvasH * 0.15; 
+            let maxDeltaX = canvasW * 0.10; 
+
+            if(this.device !== 'desktop'){
+                w = canvasW * 0.60; 
+                h = canvasH * 0.85; 
+                maxDeltaY = canvasH * 0.3;
+                maxDeltaX = canvasW * 0.15;
+
+            }
+
             this.ctx.clearRect(0, 0, canvasW, canvasH);
-
-            const w = canvasW * 0.80; 
-            const h = canvasH * 0.95; 
-
+            
             const maxLimit = 1.0;
             let progress = elapsedMs / 8000; 
             if (progress >= maxLimit) {
@@ -109,9 +110,6 @@ var round_id = $('#round_id').val();
             if (this.maxReachedTime !== null) {
                 const extendedTimeSec = (elapsedMs - this.maxReachedTime) / 1000;
                 const cycleTime = extendedTimeSec % 4;
-
-                const maxDeltaY = canvasH * 0.15; 
-                const maxDeltaX = canvasW * 0.10; 
 
                 if (cycleTime < 2) {
                     const factor = cycleTime / 2; 
@@ -141,13 +139,18 @@ var round_id = $('#round_id').val();
 
             const t = Math.min(targetX / 40, 1);
 
-            const translateX = -10 + (-25 - (-10)) * t; // -10 -> -25
-            const translateY = -70 + (-55 - (-70)) * t; // -60 -> -50
+            let translateX = -10 + (-10 - (-10)) * t; // -10 -> -25
+            let translateY = -70 + (-65 - (-70)) * t; // -60 -> -50
+
+            if(this.device == 'mobile'){
+                translateX = -10 + (-7 - (-10)) * t;
+                translateY = -70 + (-65 - (-70)) * t; 
+            }
 
             this.$plane.show().css({
                 left: `${targetX}px`,
                 top: `${targetY}px`,
-                transform: `translate(${translateX}%, ${translateY}%)`
+                transform: `translate(${translateX}%, ${translateY}%) rotate(-5deg)`
             });
 
             this.drawDynamicGlow(canvasW, canvasH);
@@ -332,8 +335,6 @@ socket.on("round:new", (data) => {
 
 socket.on("betting:timer", data => {
     betStatus = 'bet';
-    // Dynamically update canvas screen text to match server clock countdown ticker
-    engine.renderWaitingState(`PLACE YOUR BETS: ${data.time}s`);
 
     $('.bet-control').each(function () {
         $(this).data('waiting','');
@@ -343,7 +344,7 @@ socket.on("betting:timer", data => {
      plane.css({
         top: '',
         bottom: '-14px',
-        left: '-15px',
+        left: '-5px',
         transform: 'rotate(0deg) scale(1)',
         opacity: '1'
     });
@@ -352,8 +353,6 @@ socket.on("betting:timer", data => {
 socket.on("bet:close", () => {
     betStatus = 'running';
     gameLoading.removeClass('active');
-    // Lock animations onto static 1.00x preparing mode
-    engine.startLoading();
 });
 
 socket.on("round:start", data => {
@@ -439,7 +438,7 @@ socket.on("round:crash", (data) => {
         plane.css({
             top: '',
             bottom: '-14px',
-            left: '-15px',
+            left: '-5px',
             transform: 'rotate(0deg) scale(1)',
             opacity: '1'
         });

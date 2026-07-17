@@ -220,7 +220,7 @@ class AviatorController extends Controller
                 $multiplier = min($multiplier, $faredMultiplier);
             }
         }
-        $multiplier = 5;
+
         if($multiplier < 1){
             $multiplier = 1;
         }
