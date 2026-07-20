@@ -165,7 +165,14 @@ class AviatorController extends Controller
             'profit' => $profit,
         ]);
 
-        $pending_bets = AviatorBet::where('status', 'pending')->update(['status' => 'complete']);
+        $pending_bets = AviatorBet::where('status', '!=', 'complecte')->get();
+        $pending_round = AviatorRound::where('status', '!=', 'complecte')->get();
+        if($pending_bets->count() > 0){
+            $pending_bets->each->update(['status' => 'complete']);
+        }
+        if($pending_round->count() > 0){
+            $pending_round->each->update(['status' => 'complete']);
+        }
 
         return response()->json([
             'success' => true,
@@ -194,7 +201,7 @@ class AviatorController extends Controller
             }
         }
 
-        $bets = DB::table('aviator_bets')
+        $bets = DB::table('aviator_bets')->where('status','complete')
                     ->select('bet_amount', 'win_amount')
                     ->orderByDesc('id')
                     ->limit(40000)
@@ -206,13 +213,13 @@ class AviatorController extends Controller
         $multiplier = floor((100 * $houseEdge) / (1 - $random)) / 100;
 
         $totalTempBet = $temp_bets->sum('bet_amount');
-        $totalBet = $bets->sum('bet_amount');
+        $totalBet = $bets->sum('bet_amount') + $totalTempBet;
         $totalPayout = $bets->sum('win_amount');
         $houseEarning = $totalBet * 0.05;
         $allawablePayout =  ($totalBet - $houseEarning) - $totalPayout;
-                
+ 
         if($temp_bets->count() > 0){
-            $random = mt_rand(1, 100);
+            $random = rand(1, 100);
             if ($random <= 15) {
                 $multiplier = mt_rand(100, 580) / 100;
             } else {
@@ -221,9 +228,21 @@ class AviatorController extends Controller
             }
         }
 
+        // dd([
+        //     'total_temp_bet' => $totalTempBet,
+        //     'total_Bet' => $totalBet,
+        //      'total_payout' => $totalPayout,
+        //     'alloawble_payout' => $allawablePayout,
+        //     'mult' => $multiplier,
+        //     'random' => $random,
+        //     'temp_bet' => $temp_bets,
+        // ]);
+
         if($multiplier < 1){
             $multiplier = 1;
         }
+
+       
 
         return response()->json(['crash_point' => $multiplier]);
     }
@@ -343,10 +362,11 @@ class AviatorController extends Controller
         ]);
     }
 
-    public function checkBet(){
-        $user_id = auth()->id() ?? 1;
-        $bets = TempAviatorBet::where('user_id', $user_id)->get();
-        $running_bets = AviatorBet::where('user_id', $user_id)->where('status','pending')->get();
+    public function checkBet(Request $request){
+        $round_id = $request->round_id;
+        $round = AviatorRound::where('round_id', $round_id)->first();
+        $bets = TempAviatorBet::get();
+        $running_bets = AviatorBet::where('aviator_round_id',$round->id)->where('status','pending')->get();
 
         return response()->json([
             'running_bets' => $running_bets,
@@ -389,7 +409,10 @@ class AviatorController extends Controller
 
     public function deleteTempBet(Request $request){
         $user_id = $request->user_id;
-        TempAviatorBet::where('user_id', $user_id)->delete();
+        $temp = TempAviatorBet::where('user_id', $user_id)->get();
+        if($temp->count() > 0){
+            $temp->each->delete();
+        }
 
         return response()->json([
             'status' => true,

@@ -96,13 +96,13 @@ class Manager {
 
         const { roomKey,user_id } = socket;
 
-        // if(user_id){
-        //     axios.get('http://127.0.0.1:8000/aviator/temp/bet/delete', {
-        //         params: {
-        //             user_id: user_id
-        //         }
-        //     });
-        // }
+        if(user_id){
+            axios.get('http://127.0.0.1:8000/aviator/temp/bet/delete', {
+                params: {
+                    user_id: user_id
+                }
+            });
+        }
 
         if (!roomKey || !this.users[roomKey]) return;
 

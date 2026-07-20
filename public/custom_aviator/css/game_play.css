@@ -884,7 +884,13 @@
 
     .game-play .play-board-wrapper .multiplier-wrapper .multiplier {
         font-size: 40px;
-        font-weight: 500;
+        font-weight: 800;
+    }
+    .game-play .play-board-wrapper .aviator .game-loading .loading {
+        width: 50%;
+    }
+    .game-play .play-board-wrapper .aviator .loading .loading-bars {
+        width: 90%;
     }
 }
 
@@ -907,22 +913,6 @@
         width: calc(100% - 410px) !important;
     }
 }
-
-
-#plane {
-
-    will-change: transform,left,top;
-
-    transform-origin:center center;
-
-    backface-visibility:hidden;
-
-    perspective:1000px;
-
-    contain:layout style;
-
-}
-
 
 
 /* .line {

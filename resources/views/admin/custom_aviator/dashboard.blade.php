@@ -69,9 +69,9 @@
         <div class="card-soft">
             <h3>GGR</h3>
             @if($total_bet_payout && $total_bet_amount)
-            <strong>{{round(($total_bet_payout / $total_bet_amount) * 100, 2)}}%</strong>
+            <strong id="today_rtp"> {{round(($total_bet_payout / $total_bet_amount) * 100, 2)}}</strong>%
             @endif
-            <div class="muted">Realized 95.00%</div>
+            <div class="muted">Realized <span id="overall_rtp"> 95.00 </span>%</div>
         </div>
         
         <div class="card-soft">
@@ -199,6 +199,8 @@ $(document).ready(function(){
                 $('#total_win_amount').text(res.total_win_amount);
                 $('#active_users').html(res.users);
                 $('#recent_rounds').html(res.recent_rounds);
+                $('#overall_rtp').html(res.rtp);
+                $('#today_rtp').html(res.today_rtp)
             }
         })
     }

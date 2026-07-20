@@ -35,9 +35,8 @@ var round_id = $('#round_id').val();
             
             this.options = $.extend({
                 fontFamily: '"Arial", sans-serif',
-                curveColor: '#E20630',
-                fillColor: 'rgba(226, 6, 48, 0.25)',
-                planeColor: '#E20630'
+                curveColor: 'rgb(229, 2, 56)',
+                fillColor: 'rgb(99, 8, 15,0.6)',
             }, options);
 
             this.multiplier = 1.00;
@@ -67,7 +66,7 @@ var round_id = $('#round_id').val();
 
             if (screenWidth < 768) {
                 this.device = 'mobile';
-            } else if (screenWidth < 1024) {
+            } else if (screenWidth < 1224) {
             this.device = 'tablet';
             } else {
                 this.device = 'desktop';
@@ -78,17 +77,22 @@ var round_id = $('#round_id').val();
             const canvasW = this.$canvas.width();
             const canvasH = this.$canvas.height();
             
-            let w = canvasW * 0.85; 
+            let w = canvasW * 0.80; 
             let h = canvasH * 0.95; 
             let maxDeltaY = canvasH * 0.15; 
             let maxDeltaX = canvasW * 0.10; 
 
-            if(this.device !== 'desktop'){
+            if(this.device == 'mobile'){
                 w = canvasW * 0.60; 
                 h = canvasH * 0.85; 
-                maxDeltaY = canvasH * 0.3;
+                maxDeltaY = canvasH * 0.25;
                 maxDeltaX = canvasW * 0.15;
 
+            }else if(this.device == 'tablet'){
+                w = canvasW * 0.78; 
+                h = canvasH * 0.90; 
+                maxDeltaY = canvasH * 0.17;
+                maxDeltaX = canvasW * 0.1;
             }
 
             this.ctx.clearRect(0, 0, canvasW, canvasH);
@@ -137,20 +141,20 @@ var round_id = $('#round_id').val();
             this.prevPlaneX = targetX;
             this.prevPlaneY = targetY;
 
-            const t = Math.min(targetX / 40, 1);
+            const t = Math.min(targetX / 70, 1);
 
-            let translateX = -10 + (-10 - (-10)) * t; // -10 -> -25
-            let translateY = -70 + (-65 - (-70)) * t; // -60 -> -50
+            let translateX = -10 + (-15 - (-10)) * t; // -10 -> -25
+            let translateY = -75 + (-60 - (-75)) * t; // -60 -> -50
 
             if(this.device == 'mobile'){
                 translateX = -10 + (-7 - (-10)) * t;
-                translateY = -70 + (-65 - (-70)) * t; 
+                translateY = -80 + (-60 - (-80)) * t; 
             }
 
             this.$plane.show().css({
                 left: `${targetX}px`,
                 top: `${targetY}px`,
-                transform: `translate(${translateX}%, ${translateY}%) rotate(-5deg)`
+                transform: `translate(${translateX}%, ${translateY}%)`
             });
 
             this.drawDynamicGlow(canvasW, canvasH);
@@ -280,6 +284,7 @@ socket.on('bet:update',(data) => {
     const container = $('.live-bet .runninge-bet-items');
     animateCount('#total_bet', data.total_bets, 4000);
     $('#payout-bet').data('total_bets',data.total_bets);
+    animateCount('#payout-bet', data.total_bets, 4000);
 
     container.empty();
 

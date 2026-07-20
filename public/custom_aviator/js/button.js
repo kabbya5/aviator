@@ -46,6 +46,10 @@ function updateCashout(){
 }
 
 function buttonStatus(bet, status = 'pending'){
+    var bet_user_id = bet.user_id;
+
+    if(bet_user_id != user_id) resetBtn();
+    
     var parent = $('.'+bet.class_name);
     parent.data('bet_amount',bet.bet_amount);
     parent.data('bet_id', bet.id);
@@ -94,16 +98,25 @@ function deleteTempBets(){
         },
     });
 }
+socket.on("checkBetButton", (data) => {
+    data.bets.forEach(element => {
+        buttonStatus(element);
+    });
 
+    data.running_bets.forEach(element => {
+        buttonStatus(element,'running');
+    });
+});
 
 $(document).ready(function () {
     $.ajax({
         url: "/aviator/check/bets",
         type: "GET",
+        data:{round_id:round_id},
         success: function (res) {
-            // res.bets.forEach(element => {
-            //     buttonStatus(element);
-            // });
+            res.bets.forEach(element => {
+                buttonStatus(element);
+            });
 
             res.running_bets.forEach(element => {
                 buttonStatus(element,'running');
@@ -491,7 +504,8 @@ function betAutoCashout() {
     
     if(progress > 0){
         total_payout = parseInt(actual_bets * (progress / 100));
-        $('#payout-bet').text(total_payout); 
+        var active_bets = actual_bets - total_payout;
+        $('#payout-bet').text(active_bets); 
     }
    
 }
