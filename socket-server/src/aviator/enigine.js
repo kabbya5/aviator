@@ -124,7 +124,7 @@ class Engine { // Fixed typo from 'Enigine'
         });
 
         this.gameTimer = setInterval(() => {
-            const elapsedTime = Date.now() - this.roundStartTime;
+            // const elapsedTime = Date.now() - this.roundStartTime;
           
             this.speed += 0.0002;
             this.progress += this.speed;
@@ -136,7 +136,7 @@ class Engine { // Fixed typo from 'Enigine'
                 progress: this.progress,
                 speed: this.speed, 
                 crashPoint: parseFloat(this.crashPoint.toFixed(2)),
-                elapsedTime: elapsedTime,
+                elapsedTime: this.roundStartTime,
             });
 
             // Crash condition reached

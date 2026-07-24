@@ -35,18 +35,17 @@ var round_id = $('#round_id').val();
             
             this.options = $.extend({
                 fontFamily: '"Arial", sans-serif',
-                curveColor: 'rgb(229, 2, 56)',
-                fillColor: 'rgb(99, 8, 15,0.6)',
+                curveColor: '#E20630',
+                fillColor: 'rgba(226, 6, 48, 0.25)',
+                planeColor: '#E20630'
             }, options);
-
-            this.multiplier = 1.00;
-            
+    
             this.planeX = 0;
             this.planeY = 0;
             this.prevPlaneX = 0;
             this.prevPlaneY = 0;
-            this.maxReachedTime = null;
-            this.device = null;
+            this.maxReachedTime = null; 
+
             this.init();
         }
 
@@ -73,7 +72,7 @@ var round_id = $('#round_id').val();
             }
         }
 
-        updateFlight(currentMultiplier, elapsedMs) {
+        updateFlight(elapsedMs) {
             const canvasW = this.$canvas.width();
             const canvasH = this.$canvas.height();
             
@@ -141,38 +140,24 @@ var round_id = $('#round_id').val();
             this.prevPlaneX = targetX;
             this.prevPlaneY = targetY;
 
-            const t = Math.min(targetX / 70, 1);
+            let t = Math.min(targetX / 70, 1);
 
-            let translateX = -10 + (-15 - (-10)) * t; // -10 -> -25
+            let translateX = -15 + (-20 - (-15)) * t; // -10 -> -25
             let translateY = -75 + (-60 - (-75)) * t; // -60 -> -50
 
             if(this.device == 'mobile'){
-                translateX = -10 + (-7 - (-10)) * t;
-                translateY = -80 + (-60 - (-80)) * t; 
+                let t = Math.min(targetX / 75, 1);
+                translateX = -10 + (-10 - (-10)) * t;
+                translateY = -75 + (-70 - (-75)) * t; 
             }
 
             this.$plane.show().css({
                 left: `${targetX}px`,
                 top: `${targetY}px`,
-                transform: `translate(${translateX}%, ${translateY}%)`
+                transform: `translate(${translateX}%, ${translateY}%) rotate(-5deg)`
             });
 
-            this.drawDynamicGlow(canvasW, canvasH);
             this.drawFlightPath();
-        }
-
-        triggerCrash(finalMultiplier) {
-            this.maxReachedTime = null;
-            this.prevPlaneX = 0;
-            this.prevPlaneY = 0;
-            const w = this.$canvas.width();
-            const h = this.$canvas.height();
-            this.ctx.clearRect(0, 0, w, h);
-
-        }
-
-        drawDynamicGlow(w, h) {
-           //
         }
 
         drawFlightPath() {
@@ -187,7 +172,7 @@ var round_id = $('#round_id').val();
             
             // Draw smooth bezier curvature tracking from absolute bottom left
             this.ctx.quadraticCurveTo(
-                this.planeX * 0.4, startY, 
+                this.planeX * 0.5, startY, 
                 this.planeX, this.planeY
             );
             
@@ -204,15 +189,31 @@ var round_id = $('#round_id').val();
         }
 
         drawMultiplierText(text, color, subtitle = "") {
-          //
+            const w = this.$canvas.width();
+            const h = this.$canvas.height();
+
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+
+            if (subtitle) {
+                this.ctx.font = `bold ${h * 0.05}px ${this.options.fontFamily}`;
+                this.ctx.fillStyle = "#FFFFFF";
+                this.ctx.fillText(subtitle, w / 2, h / 2 - (h * 0.08));
+            }
+
+            this.ctx.font = `bold ${h * 0.13}px ${this.options.fontFamily}`;
+            this.ctx.fillStyle = color;
+            this.ctx.fillText(text, w / 2, h / 2 + (subtitle ? h * 0.04 : 0));
         }
 
-        renderStaticState(text, color) {
+        triggerCrash(finalMultiplier) {
+            this.maxReachedTime = null;
+            this.prevPlaneX = 0;
+            this.prevPlaneY = 0;
             const w = this.$canvas.width();
             const h = this.$canvas.height();
             this.ctx.clearRect(0, 0, w, h);
-            this.drawMultiplierText(text, color);
-        }
+        }    
     }
 
     $.fn.aviatorEngine = function(options) {
@@ -234,6 +235,26 @@ const engine = $canvasElement.data('aviator_engine');
 
 const aviator = document.querySelector(".aviator");
 const windowWidth = window.innerWidth;
+
+let loopInterval = null;
+let flightStartTime = null;
+
+function clearFlightInterval() {
+    if (loopInterval) {
+        clearInterval(loopInterval);
+        loopInterval = null;
+    }
+}
+
+function planeFly() {
+    clearFlightInterval();
+
+    flightStartTime = Date.now();
+    loopInterval = setInterval(() => {
+        const elapsed = Date.now() - flightStartTime;
+        engine.updateFlight(elapsed);
+    }, 30); 
+}
 
 // Core setup for socket connectivity
 const socket = io("http://localhost:3000", {
@@ -339,6 +360,7 @@ socket.on("round:new", (data) => {
 });
 
 socket.on("betting:timer", data => {
+    clearFlightInterval();
     betStatus = 'bet';
 
     $('.bet-control').each(function () {
@@ -350,7 +372,7 @@ socket.on("betting:timer", data => {
         top: '',
         bottom: '-14px',
         left: '-5px',
-        transform: 'rotate(0deg) scale(1)',
+        transform: 'rotate(-5deg) scale(1)',
         opacity: '1'
     });
 });
@@ -371,6 +393,7 @@ socket.on("multiplier:update", data => {
     multiplierText.html(realMultiplier.toFixed(2) + "x");
     progress = data.progress;
     speed = data.speed;
+    flightStartTime = data.elapsedTime;
     multiplierText.show();
     multiplierText.removeClass('small medium big');
     
@@ -391,43 +414,45 @@ socket.on("multiplier:update", data => {
     updateCashout();
     betAutoCashout();
     
-    // Pass real-time coordinates down into canvas layer update flight track loop
-    
-    engine.updateFlight(data.multiplier, data.elapsedTime);
+    if(canAnimate){
+        planeFly();
+        canAnimate = false;
+    }
 });
 
 const payoutsBlock = $(".payouts-block");
 
 socket.on("round:crash", (data) => {
-    resetBtn(); //[cite: 1]
-    $('.glow-circle').removeClass('small medium big'); //[cite: 1]
-    progress = data.progress; //[cite: 1]
-    speed = data.speed; //[cite: 1]
-    crashed = true; //[cite: 1]
-    canAnimate = true; //[cite: 1]
-    multiplierLabel.show(); //[cite: 1]
-    const payout = $("<div>").addClass("payout").text(data.multiplier.toFixed(2) + "x"); //[cite: 1]
+    resetBtn(); 
+    clearFlightInterval() 
+    $('.glow-circle').removeClass('small medium big'); 
+    progress = data.progress; 
+    speed = data.speed; 
+    crashed = true; 
+    canAnimate = true; 
+    multiplierLabel.show(); 
+    const payout = $("<div>").addClass("payout").text(data.multiplier.toFixed(2) + "x"); 
 
-    if (data.multiplier < 2) { //[cite: 1]
-        payout.css("color", "#34b4ff"); //[cite: 1]
-        multiplierText.addClass('small'); //[cite: 1]
+    if (data.multiplier < 2) { 
+        payout.css("color", "#34b4ff"); 
+        multiplierText.addClass('small'); 
     }
-    else if (data.multiplier < 10) { //[cite: 1]
-        payout.css("color", "#913ef8"); //[cite: 1]
+    else if (data.multiplier < 10) { 
+        payout.css("color", "#913ef8"); 
     }
     else{
-        payout.css("color", "#c017b4"); //[cite: 1]
-        multiplierText.addClass('big'); //[cite: 1]
+        payout.css("color", "#c017b4"); 
+        multiplierText.addClass('big'); 
     }
 
-    payoutsBlock.prepend(payout); //[cite: 1]
+    payoutsBlock.prepend(payout); 
 
-    payoutsBlock.children().each(function(index) { //[cite: 1]
-        $(this).css({ transition: "transform 0.4s ease" }); //[cite: 1]
+    payoutsBlock.children().each(function(index) { 
+        $(this).css({ transition: "transform 0.4s ease" }); 
     });
 
-    if (payoutsBlock.children().length > 20) { //[cite: 1]
-        payoutsBlock.children().last().remove(); //[cite: 1]
+    if (payoutsBlock.children().length > 20) { 
+        payoutsBlock.children().last().remove(); 
     }
 
     plane.css({
@@ -444,7 +469,7 @@ socket.on("round:crash", (data) => {
             top: '',
             bottom: '-14px',
             left: '-5px',
-            transform: 'rotate(0deg) scale(1)',
+            transform: 'rotate(-5deg) scale(1)',
             opacity: '1'
         });
 

@@ -26,19 +26,19 @@
         }
 
         .game-wrapper {
-            width: 90%;
-            max-width: 900px;
+            width: 100%;
             background: #141518;
             border-radius: 12px;
             padding: 15px;
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
             border: 1px solid #22252a;
+            height: 100%;
         }
 
         .canvas-container {
             position: relative;
             width: 100%;
-            height: 400px;
+            height: 500px;
             background: rgb(21,21,21);
             /* Dark background sunburst simulation */
             background: radial-gradient(circle, rgba(29,29,29,1) 0%, rgba(10,10,10,1) 100%);
@@ -80,9 +80,7 @@
             width: 85px;
             height: auto;
             pointer-events: none;
-            /* transform-origin set to center ensures rotation and centering math aligned */
             transform-origin: center center;
-            /* Hardware-accelerated transitions for smooth micro-movements */
             will-change: left, top, transform;
             transition: transform 0.05s linear;
         }

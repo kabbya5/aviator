@@ -334,7 +334,7 @@ class AviatorController extends Controller
     public function cashout(Request $request){
         $round_id = $request->round_id;
         $user = User::find($request->user_id);
-        $user->increment('total_balance', $request->amount);
+        
         $round = AviatorRound::where('round_id', $round_id)->first();
 
         $bet = AviatorBet::where('class_name',$request->class_name)->where('aviator_round_id', $round->id)->where('user_id',$request->user_id)->where('status','pending')->first();

@@ -80,7 +80,10 @@
                         </div>
                         <div class="stats">
                             <div class="bets">
-                                <span class="bets-count"> <span id="payout-bet"> 0 </span>/<span id="total_bet">{{rand(3000,5000)}}</span> </span>
+                                @php
+                                    $total_bets_count = rand(300,2000);
+                                @endphp
+                                <span class="bets-count"> <span id="payout-bet" data-total_bets="{{$total_bets_count}}"> 0 </span>/<span id="total_bet">{{$total_bets_count}}</span> </span>
                                 <span class="bets-label"> Bets</span>
                             </div>
                             <div class="total-win"> Total win {{$currency}} </div>

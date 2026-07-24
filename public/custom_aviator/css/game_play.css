@@ -890,7 +890,11 @@
         width: 50%;
     }
     .game-play .play-board-wrapper .aviator .loading .loading-bars {
-        width: 90%;
+        width: 85%;
+    }
+    .game-play .play-board-wrapper .aviator #plane{
+        width:90px;
+ 
     }
 }
 

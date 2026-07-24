@@ -71,8 +71,8 @@ function buttonStatus(bet, status = 'pending'){
 
 function resetBtn(){
     $('.bet-control').each(function(){
-        $btn = $(this).find('.btn');
-        $btn.removeClass('active');
+        $resetBtn = $(this).find('.btn');
+        $resetBtn.removeClass('active');
         var waiting = $(this).data('waiting') ?? null;
         var auto_bet = $(this).data('auto_bet') ?? null;
 
